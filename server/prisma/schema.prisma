@@ -1,0 +1,178 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String // Hashed password
+  role      String   @default("customer") // "guest", "customer", "staff", "admin"
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Stats
+  gamesPlayed  Int     @default(0)
+  winRate      Int     @default(0)
+  favoriteGame String?
+  totalSpent   Float   @default(0)
+  xp           Int     @default(0)
+
+  // Relations
+  badges                Badge[]
+  bookings              Booking[]
+  registeredTournaments TournamentParticipant[]
+  pendingRequests       TournamentRequest[]
+  characters            Character[]
+}
+
+model Badge {
+  id          String   @id @default(uuid())
+  name        String
+  icon        String
+  description String
+  dateEarned  DateTime @default(now())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Product {
+  id          String @id @default(uuid())
+  name        String
+  category    String // "game", "drink", "snack"
+  description String
+  price       Float
+  image       String
+  tags        String // Stored as JSON string or comma-separated
+  rating      Float  @default(0)
+
+  // Specific fields
+  players  String?
+  duration String?
+  alcohol  Boolean?
+
+  cartItems CartItem[]
+}
+
+model Booking {
+  id           String     @id @default(uuid())
+  date         DateTime
+  time         String
+  participants Int
+  duration     Int // hours
+  totalPrice   Float
+  status       String     @default("pending") // "confirmed", "pending", "cancelled"
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items        CartItem[]
+}
+
+model CartItem {
+  id        String  @id @default(uuid())
+  quantity  Int
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
+
+model Tournament {
+  id          String   @id @default(uuid())
+  title       String
+  date        DateTime
+  type        String // "Standard", "DND", "Party", "Blitz"
+  gameSystem  String?
+  frequency   String?
+  includes    String // JSON string
+  rules       String?
+  slots       Int
+  filled      Int      @default(0)
+  status      String // "upcoming", "ongoing", "completed", "cancelled"
+  image       String
+  description String
+  dm          String?
+
+  participants TournamentParticipant[]
+  requests     TournamentRequest[]
+  campaign     Campaign?
+}
+
+model TournamentParticipant {
+  id           String     @id @default(uuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  joinedAt     DateTime   @default(now())
+
+  @@unique([userId, tournamentId])
+}
+
+model TournamentRequest {
+  id           String     @id @default(uuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  status       String     @default("pending") // "pending", "approved", "rejected"
+  createdAt    DateTime   @default(now())
+}
+
+model Campaign {
+  id          String @id @default(uuid())
+  title       String
+  system      String
+  dm          String
+  image       String
+  description String
+
+  tournamentId String?     @unique
+  tournament   Tournament? @relation(fields: [tournamentId], references: [id])
+
+  party    Character[]
+  sessions Session[]
+  notes    CampaignNote[]
+}
+
+model Character {
+  id     String @id @default(uuid())
+  name   String
+  class  String
+  level  Int
+  race   String
+  status String // "Alive", "Dead", "Missing"
+  avatar String
+
+  // A character belongs to a user (player) and a campaign
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id         String   @id @default(uuid())
+  title      String
+  date       DateTime
+  summary    String
+  location   String
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+}
+
+model CampaignNote {
+  id         String   @id @default(uuid())
+  title      String
+  content    String
+  type       String // "Lore", "NPC", "Location", "Loot"
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+}
