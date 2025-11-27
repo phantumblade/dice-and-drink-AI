@@ -127,6 +127,7 @@ Un ecosistema integrato per organizzare e gestire competizioni di gioco.
 - **Gestione Slot**: Sistema intelligente di prenotazione posti con limiti personalizzabili
 - **Pannello Amministrativo**: Crea, modifica ed elimina tornei con facilità
 - **Visualizzazioni Dinamiche**: Card colorate con indicatori di stato in tempo reale
+- **Indicatore Urgenza**: Segnalazione visiva per tornei in chiusura (3-7 giorni)
 - **Notifiche**: Aggiornamenti automatici su iscrizioni e modifiche ai tornei
 
 **Tipologie di Torneo:**

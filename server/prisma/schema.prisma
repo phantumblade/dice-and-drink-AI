@@ -30,8 +30,15 @@ model User {
   badges                Badge[]
   bookings              Booking[]
   registeredTournaments TournamentParticipant[]
-  pendingRequests       TournamentRequest[]
-  characters            Character[]
+
+  // D&D Relations
+  characters       Character[]
+  campaignsOwned   Campaign[]            @relation("DungeonMaster")
+  campaignsJoined  CampaignParticipant[]
+  campaignRequests CampaignRequest[]
+
+  // Tournament Wins
+  tournamentsWon Tournament[] @relation("TournamentWinner")
 }
 
 model Badge {
@@ -59,7 +66,8 @@ model Product {
   duration String?
   alcohol  Boolean?
 
-  cartItems CartItem[]
+  cartItems   CartItem[]
+  tournaments Tournament[]
 }
 
 model Booking {
@@ -85,24 +93,36 @@ model CartItem {
 }
 
 model Tournament {
-  id          String   @id @default(uuid())
-  title       String
-  date        DateTime
-  type        String // "Standard", "DND", "Party", "Blitz"
-  gameSystem  String?
-  frequency   String?
-  includes    String // JSON string
-  rules       String?
-  slots       Int
-  filled      Int      @default(0)
-  status      String // "upcoming", "ongoing", "completed", "cancelled"
-  image       String
-  description String
-  dm          String?
+  id    String   @id @default(uuid())
+  title String
+  date  DateTime
+  type  String // "Standard", "Competitive", "Casual"
+
+  // Relations
+  gameId String?
+  game   Product? @relation(fields: [gameId], references: [id])
 
   participants TournamentParticipant[]
-  requests     TournamentRequest[]
-  campaign     Campaign?
+
+  // Competitive Features
+  entryFee Float   @default(0)
+  prizes   String // JSON description of prizes
+  winnerId String?
+  winner   User?   @relation("TournamentWinner", fields: [winnerId], references: [id])
+
+  // Display
+  image       String
+  description String
+  rules       String?
+
+  // Status
+  slots  Int
+  filled Int    @default(0)
+  status String // "upcoming", "ongoing", "completed", "cancelled"
+
+  // Legacy fields kept for compatibility if needed, or removed if clean break
+  gameSystem String?
+  includes   String? // JSON string
 }
 
 model TournamentParticipant {
@@ -116,46 +136,94 @@ model TournamentParticipant {
   @@unique([userId, tournamentId])
 }
 
-model TournamentRequest {
-  id           String     @id @default(uuid())
-  userId       String
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tournamentId String
-  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  status       String     @default("pending") // "pending", "approved", "rejected"
-  createdAt    DateTime   @default(now())
-}
-
 model Campaign {
-  id          String @id @default(uuid())
-  title       String
-  system      String
-  dm          String
+  id     String @id @default(uuid())
+  title  String
+  type   String // "ONE_SHOT", "SHORT_CAMPAIGN", "LONG_CAMPAIGN"
+  system String // "D&D 5e", "Pathfinder", etc.
+
+  // DM Relation
+  dmId String
+  dm   User   @relation("DungeonMaster", fields: [dmId], references: [id])
+
+  // Logistics
+  startDate DateTime
+  frequency String // "Weekly", "Bi-weekly", "Monthly", "One-time"
+  status    String // "RECRUITING", "ACTIVE", "PAUSED", "COMPLETED"
+
+  // Content
   image       String
   description String
+  levelRange  String // e.g., "1-5", "10+"
 
-  tournamentId String?     @unique
-  tournament   Tournament? @relation(fields: [tournamentId], references: [id])
-
-  party    Character[]
-  sessions Session[]
-  notes    CampaignNote[]
+  // Relations
+  participants CampaignParticipant[]
+  requests     CampaignRequest[]
+  sessions     Session[]
+  notes        CampaignNote[]
 }
 
 model Character {
   id     String @id @default(uuid())
-  name   String
-  class  String
-  level  Int
-  race   String
-  status String // "Alive", "Dead", "Missing"
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Core Info
+  name       String
+  race       String
+  class      String
+  level      Int
+  background String?
+  alignment  String?
+
+  // Stats (JSON for flexibility)
+  stats  String // { str: 10, dex: 14, ... }
+  skills String // { stealth: +5, ... }
+
+  // Inventory & Status
+  inventory String? // JSON list of items
+  hp        Int
+  maxHp     Int
+  status    String // "ALIVE", "DEAD", "RETIRED"
+
+  // Visuals
   avatar String
 
-  // A character belongs to a user (player) and a campaign
-  userId     String?
-  user       User?    @relation(fields: [userId], references: [id])
+  // Relations
+  campaigns CampaignParticipant[]
+  requests  CampaignRequest[]
+}
+
+model CampaignRequest {
+  id         String   @id @default(uuid())
   campaignId String
   campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  characterId String
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  status    String   @default("PENDING") // "PENDING", "APPROVED", "REJECTED"
+  message   String? // Optional message to DM
+  createdAt DateTime @default(now())
+}
+
+model CampaignParticipant {
+  id         String   @id @default(uuid())
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  characterId String
+  character   Character @relation(fields: [characterId], references: [id])
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  joinedAt DateTime @default(now())
+
+  @@unique([campaignId, characterId])
 }
 
 model Session {

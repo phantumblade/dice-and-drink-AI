@@ -19,7 +19,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
     if (!isOpen) return null;
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
@@ -28,7 +28,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 setError('Tutti i campi sono obbligatori.');
                 return;
             }
-            const result = register(formData);
+            const result = await register(formData);
             if (result.success) {
                 onClose();
                 setFormData({ name: '', email: '', password: '' });
@@ -40,7 +40,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 setError('Inserisci email e password.');
                 return;
             }
-            const result = login(formData.email, formData.password);
+            const result = await login(formData.email, formData.password);
             if (result.success) {
                 onClose();
                 setFormData({ name: '', email: '', password: '' });
@@ -75,10 +75,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                         {isRegistering && (
                             <div>
                                 <label className="block text-xs font-black uppercase mb-1">Nome Avventuriero</label>
-                                <input 
+                                <input
                                     type="text"
                                     value={formData.name}
-                                    onChange={e => setFormData({...formData, name: e.target.value})}
+                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
                                     className="w-full border-2 border-black p-3 font-bold focus:bg-neo-bg focus:shadow-neo outline-none transition-all"
                                     placeholder="Come ti chiameremo?"
                                 />
@@ -86,26 +86,26 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                         )}
                         <div>
                             <label className="block text-xs font-black uppercase mb-1">Email</label>
-                            <input 
+                            <input
                                 type="email"
                                 value={formData.email}
-                                onChange={e => setFormData({...formData, email: e.target.value})}
+                                onChange={e => setFormData({ ...formData, email: e.target.value })}
                                 className="w-full border-2 border-black p-3 font-bold focus:bg-neo-bg focus:shadow-neo outline-none transition-all"
                                 placeholder="tu@esempio.com"
                             />
                         </div>
                         <div>
                             <label className="block text-xs font-black uppercase mb-1">Password</label>
-                            <input 
+                            <input
                                 type="password"
                                 value={formData.password}
-                                onChange={e => setFormData({...formData, password: e.target.value})}
+                                onChange={e => setFormData({ ...formData, password: e.target.value })}
                                 className="w-full border-2 border-black p-3 font-bold focus:bg-neo-bg focus:shadow-neo outline-none transition-all"
                                 placeholder="••••••••"
                             />
                         </div>
 
-                        <button 
+                        <button
                             type="submit"
                             className={`w-full border-2 border-black py-4 font-black uppercase shadow-neo hover:translate-y-1 hover:shadow-none transition-all flex justify-center items-center gap-2 mt-6 ${isRegistering ? 'bg-black text-white' : 'bg-neo-violet text-white'}`}
                         >
@@ -117,7 +117,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                         <p className="text-sm font-bold text-gray-500 mb-2">
                             {isRegistering ? 'Hai già un account?' : 'Nuovo giocatore?'}
                         </p>
-                        <button 
+                        <button
                             onClick={() => { setIsRegistering(!isRegistering); setError(''); }}
                             className="text-black font-black uppercase hover:text-neo-pink underline decoration-2 underline-offset-2"
                         >

@@ -82,10 +82,10 @@ router.post('/login', async (req, res) => {
             where: { userId: user.id },
             select: { tournamentId: true }
         });
-        const pendingRequests = await prisma.tournamentRequest.findMany({
-            where: { userId: user.id, status: 'pending' },
-            select: { tournamentId: true }
-        });
+
+        // Tournament requests are not yet implemented in schema, returning empty
+        const pendingRequests: string[] = [];
+
         const badges = await prisma.badge.findMany({
             where: { userId: user.id }
         });
@@ -103,7 +103,7 @@ router.post('/login', async (req, res) => {
                 role: user.role,
                 avatar: user.avatar,
                 registeredTournaments: registeredTournaments.map(t => t.tournamentId),
-                pendingRequests: pendingRequests.map(r => r.tournamentId),
+                pendingRequests: pendingRequests,
                 badges,
                 bookings: bookings.map(b => ({
                     id: b.id,

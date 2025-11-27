@@ -3,10 +3,11 @@ import path from 'path';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes';
-import productRoutes from './routes/products.routes';
-import tournamentRoutes from './routes/tournaments.routes';
-import campaignRoutes from './routes/campaigns.routes';
-import userRoutes from './routes/users.routes';
+import productsRouter from './routes/products.routes';
+import tournamentsRouter from './routes/tournaments.routes';
+import campaignsRouter from './routes/campaigns.routes';
+import usersRouter from './routes/users.routes';
+import charactersRouter from './routes/characters.routes';
 
 dotenv.config();
 
@@ -16,15 +17,17 @@ const PORT = 3001;
 app.use(cors());
 app.use(express.json());
 
-// Serve static files from public/images
+// Serve static files from public/images and public/uploads
 app.use('/images', express.static(path.join(__dirname, '../public/images')));
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/tournaments', tournamentRoutes);
-app.use('/api/campaigns', campaignRoutes);
-app.use('/api/users', userRoutes);
+app.use('/api/products', productsRouter);
+app.use('/api/tournaments', tournamentsRouter);
+app.use('/api/campaigns', campaignsRouter);
+app.use('/api/users', usersRouter);
+app.use('/api/characters', charactersRouter);
 
 app.get('/', (req, res) => {
     res.send('Dice & Drink API is running');

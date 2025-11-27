@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Booking } from '../types';
 import api from '../services/api';
+import { useToast } from './ToastContext';
 
 interface RegisterData {
   name: string;
@@ -27,6 +28,8 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const { showToast } = useToast();
+
   const checkSession = async () => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -52,9 +55,12 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const { token, user } = response.data;
       localStorage.setItem('token', token);
       setUser(user);
+      showToast(`Bentornato, ${user.name}!`, 'success');
       return { success: true };
     } catch (error: any) {
-      return { success: false, message: error.response?.data?.message || "Login failed" };
+      const msg = error.response?.data?.message || "Login fallito";
+      showToast(msg, 'error');
+      return { success: false, message: msg };
     }
   };
 
@@ -64,15 +70,19 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const { token, user } = response.data;
       localStorage.setItem('token', token);
       setUser(user);
+      showToast(`Benvenuto nel party, ${user.name}!`, 'success');
       return { success: true };
     } catch (error: any) {
-      return { success: false, message: error.response?.data?.message || "Registration failed" };
+      const msg = error.response?.data?.message || "Registrazione fallita";
+      showToast(msg, 'error');
+      return { success: false, message: msg };
     }
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem('token');
+    showToast('Logout effettuato con successo', 'info');
   };
 
   const updateProfile = (data: Partial<User>) => {
@@ -92,12 +102,14 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const registerForTournament = async (tournamentId: string) => {
     if (user) {
       try {
-        await api.post(`/tournaments/${tournamentId}/join`);
+        await api.post(`/tournaments/${tournamentId}/join`, { userId: user.id });
         // Refresh user data to get updated registeredTournaments
         const response = await api.get('/users/me');
         setUser(response.data);
+        showToast('Iscrizione al torneo confermata!', 'success');
       } catch (error) {
         console.error("Failed to join tournament", error);
+        showToast('Impossibile iscriversi al torneo', 'error');
       }
     }
   };

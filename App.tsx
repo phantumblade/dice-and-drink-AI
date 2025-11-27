@@ -17,6 +17,8 @@ import { CartProvider } from './contexts/CartContext';
 import { UserProvider, useUser } from './contexts/UserContext';
 import { ProductProvider } from './contexts/ProductContext';
 import { TournamentProvider } from './contexts/TournamentContext';
+import { CampaignProvider } from './contexts/CampaignContext';
+import { ToastProvider } from './contexts/ToastContext';
 
 const AppContent: React.FC = () => {
   const { user } = useUser();
@@ -72,15 +74,19 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <UserProvider>
-      <ProductProvider>
-        <TournamentProvider>
+    <ToastProvider>
+      <UserProvider>
+        <ProductProvider>
           <CartProvider>
-            <AppContent />
+            <TournamentProvider>
+              <CampaignProvider>
+                <AppContent />
+              </CampaignProvider>
+            </TournamentProvider>
           </CartProvider>
-        </TournamentProvider>
-      </ProductProvider>
-    </UserProvider>
+        </ProductProvider>
+      </UserProvider>
+    </ToastProvider>
   );
 };
 

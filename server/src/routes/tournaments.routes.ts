@@ -1,6 +1,4 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authenticateToken, AuthRequest } from '../middleware/auth.middleware';
 import prisma from '../prisma';
 
 const router = Router();
@@ -9,90 +7,110 @@ const router = Router();
 router.get('/', async (req, res) => {
     try {
         const tournaments = await prisma.tournament.findMany({
+            orderBy: { date: 'asc' },
             include: {
+                game: true,
                 participants: {
-                    include: { user: { select: { name: true, avatar: true } } }
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                avatar: true
+                            }
+                        }
+                    }
+                },
+                winner: {
+                    select: {
+                        id: true,
+                        name: true,
+                        avatar: true
+                    }
                 }
             }
         });
-
-        const formatted = tournaments.map((t: any) => ({
-            ...t,
-            includes: JSON.parse(t.includes),
-            participantsList: t.participants.map((p: any) => ({
-                name: p.user.name,
-                avatar: p.user.avatar
-            }))
-        }));
-
-        res.json(formatted);
+        res.json(tournaments);
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching tournaments', error });
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch tournaments' });
     }
 });
 
-// Get tournament details
+// Get single tournament
 router.get('/:id', async (req, res) => {
     try {
         const tournament = await prisma.tournament.findUnique({
             where: { id: req.params.id },
             include: {
+                game: true,
                 participants: {
-                    include: { user: { select: { name: true, avatar: true } } }
-                }
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                avatar: true
+                            }
+                        }
+                    }
+                },
+                winner: true
             }
         });
-
-        if (!tournament) return res.status(404).json({ message: 'Tournament not found' });
-
-        res.json({
-            ...tournament,
-            includes: JSON.parse(tournament.includes),
-            participantsList: tournament.participants.map((p: any) => ({
-                name: p.user.name,
-                avatar: p.user.avatar
-            }))
-        });
+        if (!tournament) {
+            return res.status(404).json({ error: 'Tournament not found' });
+        }
+        res.json(tournament);
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching tournament', error });
+        res.status(500).json({ error: 'Failed to fetch tournament' });
     }
 });
 
 // Join tournament
-router.post('/:id/join', authenticateToken, async (req: AuthRequest, res) => {
+router.post('/:id/join', async (req, res) => {
+    const { userId } = req.body;
     try {
-        const tournamentId = req.params.id;
-        const userId = req.user!.userId;
-
-        const tournament = await prisma.tournament.findUnique({ where: { id: tournamentId } });
-        if (!tournament) return res.status(404).json({ message: 'Tournament not found' });
-
-        if (tournament.filled >= tournament.slots) {
-            return res.status(400).json({ message: 'Tournament is full' });
-        }
-
-        // Check if already joined
-        const existing = await prisma.tournamentParticipant.findUnique({
-            where: { userId_tournamentId: { userId, tournamentId } }
+        const tournament = await prisma.tournament.findUnique({
+            where: { id: req.params.id },
+            include: { participants: true }
         });
 
-        if (existing) {
-            return res.status(400).json({ message: 'Already joined' });
+        if (!tournament) return res.status(404).json({ error: 'Tournament not found' });
+
+        if (tournament.participants.length >= tournament.slots) {
+            return res.status(400).json({ error: 'Tournament is full' });
         }
 
-        await prisma.$transaction([
-            prisma.tournamentParticipant.create({
-                data: { userId, tournamentId }
-            }),
-            prisma.tournament.update({
-                where: { id: tournamentId },
-                data: { filled: { increment: 1 } }
-            })
-        ]);
+        const existingParticipant = await prisma.tournamentParticipant.findUnique({
+            where: {
+                userId_tournamentId: {
+                    userId,
+                    tournamentId: req.params.id
+                }
+            }
+        });
+
+        if (existingParticipant) {
+            return res.status(400).json({ error: 'User already registered' });
+        }
+
+        await prisma.tournamentParticipant.create({
+            data: {
+                userId,
+                tournamentId: req.params.id
+            }
+        });
+
+        // Update filled count
+        await prisma.tournament.update({
+            where: { id: req.params.id },
+            data: { filled: { increment: 1 } }
+        });
 
         res.json({ message: 'Successfully joined tournament' });
     } catch (error) {
-        res.status(500).json({ message: 'Error joining tournament', error });
+        res.status(500).json({ error: 'Failed to join tournament' });
     }
 });
 
