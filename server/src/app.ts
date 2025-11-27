@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'path';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes';
@@ -14,6 +15,9 @@ const PORT = 3001;
 
 app.use(cors());
 app.use(express.json());
+
+// Serve static files from public/images
+app.use('/images', express.static(path.join(__dirname, '../public/images')));
 
 // Routes
 app.use('/api/auth', authRoutes);

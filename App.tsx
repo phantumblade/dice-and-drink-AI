@@ -11,7 +11,7 @@ import Booking from './pages/Booking';
 import About from './pages/About';
 import DnDTracker from './pages/DnDTracker';
 import CartBar from './components/CartBar';
-import AiAssistant from './components/AiAssistant';
+
 import { UserRole } from './types';
 import { CartProvider } from './contexts/CartContext';
 import { UserProvider, useUser } from './contexts/UserContext';
@@ -64,7 +64,7 @@ const AppContent: React.FC = () => {
 
         <Footer />
         <CartBar />
-        <AiAssistant />
+
       </div>
     </Router>
   );
