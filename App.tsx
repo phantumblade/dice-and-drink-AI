@@ -11,6 +11,7 @@ import Booking from './pages/Booking';
 import About from './pages/About';
 import DnDTracker from './pages/DnDTracker';
 import CartBar from './components/CartBar';
+import CampaignDetailsPage from './pages/CampaignDetailsPage'; // Import CampaignDetailsPage
 
 import { UserRole } from './types';
 import { CartProvider } from './contexts/CartContext';
@@ -61,6 +62,9 @@ const AppContent: React.FC = () => {
                 <Dashboard />
               </ProtectedRoute>
             } />
+
+            {/* New route for campaign details */}
+            <Route path="/campaigns/:id" element={<CampaignDetailsPage />} />
           </Routes>
         </main>
 

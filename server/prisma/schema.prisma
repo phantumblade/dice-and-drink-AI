@@ -38,7 +38,8 @@ model User {
   campaignRequests CampaignRequest[]
 
   // Tournament Wins
-  tournamentsWon Tournament[] @relation("TournamentWinner")
+  tournamentsWon Tournament[]   @relation("TournamentWinner")
+  notifications  Notification[]
 }
 
 model Badge {
@@ -116,9 +117,10 @@ model Tournament {
   rules       String?
 
   // Status
-  slots  Int
-  filled Int    @default(0)
-  status String // "upcoming", "ongoing", "completed", "cancelled"
+  slots   Int
+  filled  Int    @default(0)
+  status  String // "upcoming", "ongoing", "completed", "cancelled"
+  deposit Float  @default(0)
 
   // Legacy fields kept for compatibility if needed, or removed if clean break
   gameSystem String?
@@ -150,6 +152,14 @@ model Campaign {
   startDate DateTime
   frequency String // "Weekly", "Bi-weekly", "Monthly", "One-time"
   status    String // "RECRUITING", "ACTIVE", "PAUSED", "COMPLETED"
+  deposit   Float    @default(0)
+
+  // D&D Specifics
+  maxPlayers      Int    @default(4)
+  currentPlayers  Int    @default(0)
+  platform        String @default("In Person")
+  sessionDuration String @default("3-4 hours")
+  tags            String @default("[]")
 
   // Content
   image       String
@@ -227,11 +237,18 @@ model CampaignParticipant {
 }
 
 model Session {
-  id         String   @id @default(uuid())
-  title      String
-  date       DateTime
-  summary    String
-  location   String
+  id       String   @id @default(uuid())
+  title    String
+  date     DateTime
+  summary  String
+  location String
+
+  // Details
+  loot    String? // JSON or text
+  enemies String? // JSON or text
+  quests  String? // JSON or text
+  notes   String? // JSON or text
+
   campaignId String
   campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 }
@@ -243,4 +260,14 @@ model CampaignNote {
   type       String // "Lore", "NPC", "Location", "Loot"
   campaignId String
   campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String // "SUCCESS", "ERROR", "INFO"
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
 }

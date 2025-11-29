@@ -15,8 +15,8 @@ interface UserContextType {
   register: (data: RegisterData) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   updateProfile: (data: Partial<User>) => void;
-  addBooking: (booking: Booking) => void;
-  registerForTournament: (tournamentId: string) => Promise<void>;
+  addBooking: (booking: Booking) => Promise<void>;
+  registerForTournament: (tournamentId: string) => Promise<boolean>;
   requestJoinTournament: (tournamentId: string) => void;
   withdrawFromTournament: (tournamentId: string) => void;
   loading: boolean;
@@ -92,26 +92,38 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const addBooking = (booking: Booking) => {
-    // TODO: Implement API booking
+  const addBooking = async (booking: Booking) => {
     if (user) {
-      setUser({ ...user, bookings: [...user.bookings, booking] });
+      try {
+        const response = await api.post('/bookings', booking);
+        const newBooking = response.data;
+        // Refresh user to get full data including relations if needed, or just append
+        setUser(prev => prev ? { ...prev, bookings: [newBooking, ...prev.bookings] } : null);
+        showToast('Prenotazione confermata!', 'success');
+      } catch (error) {
+        console.error('Failed to add booking', error);
+        showToast('Errore durante la prenotazione', 'error');
+        throw error; // Re-throw so the caller knows it failed
+      }
     }
   };
 
-  const registerForTournament = async (tournamentId: string) => {
+  const registerForTournament = async (tournamentId: string): Promise<boolean> => {
     if (user) {
       try {
         await api.post(`/tournaments/${tournamentId}/join`, { userId: user.id });
         // Refresh user data to get updated registeredTournaments
         const response = await api.get('/users/me');
         setUser(response.data);
-        showToast('Iscrizione al torneo confermata!', 'success');
+        // showToast('Iscrizione al torneo confermata!', 'success'); // Handled by modal now
+        return true;
       } catch (error) {
         console.error("Failed to join tournament", error);
         showToast('Impossibile iscriversi al torneo', 'error');
+        return false;
       }
     }
+    return false;
   };
 
   const requestJoinTournament = (tournamentId: string) => {

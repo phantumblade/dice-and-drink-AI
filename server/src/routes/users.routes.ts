@@ -31,6 +31,9 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
                 bookings: true,
                 registeredTournaments: {
                     include: { tournament: true }
+                },
+                campaignsJoined: {
+                    include: { campaign: true, character: true }
                 }
             }
         });

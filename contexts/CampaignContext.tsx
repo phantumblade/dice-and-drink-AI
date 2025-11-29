@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
 import { Campaign, CampaignRequest } from '../types';
 import { useToast } from './ToastContext';
+import { useUser } from './UserContext';
 
 interface CampaignContextType {
     campaigns: Campaign[];
@@ -16,6 +17,8 @@ export const CampaignProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
     const [loading, setLoading] = useState(true);
     const { showToast } = useToast();
+
+    const { user } = useUser();
 
     const fetchCampaigns = async () => {
         try {
@@ -34,8 +37,12 @@ export const CampaignProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }, []);
 
     const requestJoinCampaign = async (campaignId: string, characterId: string, message: string) => {
+        if (!user) {
+            showToast('Devi essere loggato per inviare una richiesta', 'error');
+            return;
+        }
         try {
-            await api.post(`/campaigns/${campaignId}/request`, { characterId, message, userId: 'current-user-id-placeholder' }); // User ID should be handled by backend auth or passed from UserContext
+            await api.post(`/campaigns/${campaignId}/request`, { characterId, message, userId: user.id });
             showToast('Richiesta inviata con successo!', 'success');
             fetchCampaigns();
         } catch (error: any) {

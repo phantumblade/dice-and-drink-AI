@@ -8,7 +8,10 @@ async function main() {
     // Create Admin/DM
     const dmVal = await prisma.user.upsert({
         where: { email: 'valentina@example.com' },
-        update: {},
+        update: {
+            password: password,
+            role: 'staff'
+        },
         create: {
             id: 'u_dm1',
             name: 'Valentina R.',
@@ -27,6 +30,28 @@ async function main() {
                 ]
             }
         },
+    });
+
+    // Create Super Admin
+    await prisma.user.upsert({
+        where: { email: 'admin@example.com' },
+        update: {
+            password: password,
+            role: 'admin'
+        },
+        create: {
+            id: 'u_admin',
+            name: 'Super Admin',
+            email: 'admin@example.com',
+            password,
+            role: 'admin',
+            avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=400&h=400',
+            gamesPlayed: 0,
+            winRate: 0,
+            favoriteGame: 'System',
+            totalSpent: 0,
+            xp: 99999
+        }
     });
 
     // Create Player

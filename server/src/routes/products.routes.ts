@@ -29,4 +29,51 @@ router.get('/:id', async (req, res) => {
     }
 });
 
+// Create product
+router.post('/', async (req, res) => {
+    try {
+        const { name, description, price, category, image } = req.body;
+
+        const product = await prisma.product.create({
+            data: {
+                name,
+                description,
+                price,
+                category,
+                image,
+                tags: JSON.stringify([]) // Default empty tags
+            }
+        });
+
+        res.status(201).json({ ...product, tags: [] });
+    } catch (error) {
+        console.error('Error creating product:', error);
+        res.status(500).json({ message: 'Error creating product', error });
+    }
+});
+
+// Update product
+router.put('/:id', async (req, res) => {
+    try {
+        const { name, description, price, category, image } = req.body;
+        const product = await prisma.product.update({
+            where: { id: req.params.id },
+            data: { name, description, price, category, image }
+        });
+        res.json({ ...product, tags: JSON.parse(product.tags) });
+    } catch (error) {
+        res.status(500).json({ message: 'Error updating product', error });
+    }
+});
+
+// Delete product
+router.delete('/:id', async (req, res) => {
+    try {
+        await prisma.product.delete({ where: { id: req.params.id } });
+        res.json({ message: 'Product deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error deleting product', error });
+    }
+});
+
 export default router;

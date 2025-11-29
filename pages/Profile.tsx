@@ -8,6 +8,7 @@ import { useToast } from '../contexts/ToastContext';
 import CharacterCard from '../components/CharacterCard';
 import CharacterCreationModal from '../components/CharacterCreationModal';
 import DMDashboard from '../components/DMDashboard';
+import Dashboard from './Dashboard'; // Import Dashboard component
 
 interface ProfileProps {
     user: User;
@@ -31,10 +32,10 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
     });
 
     useEffect(() => {
-        if (activeTab === 'characters' || activeTab === 'dm') {
+        if (user.role !== 'admin' && (activeTab === 'characters' || activeTab === 'dm')) {
             fetchCharacters();
         }
-    }, [activeTab, user.id]);
+    }, [activeTab, user.id, user.role]);
 
     const fetchCharacters = async () => {
         try {
@@ -83,8 +84,14 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
         }
     };
 
-    const userTournaments = tournaments.filter(t => (user.registeredTournaments || []).includes(t.id));
+    const userTournaments = tournaments.filter(t => user.registeredTournaments?.some(rt => rt.tournamentId === t.id));
 
+    // ADMIN VIEW
+    if (user.role === 'admin') {
+        return <Dashboard />;
+    }
+
+    // STANDARD USER VIEW
     return (
         <div className="max-w-6xl mx-auto px-4 py-8 md:py-12 pb-24">
             {/* Profile Card */}
@@ -294,6 +301,42 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
                                                 >
                                                     Ritirati
                                                 </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Active Campaigns */}
+                        <div className="bg-white border-2 border-black p-6 shadow-neo rounded-sm">
+                            <h3 className="font-black flex items-center gap-2 mb-6 uppercase text-lg border-b-2 border-black pb-3">
+                                <Scroll className="w-5 h-5" /> Le Mie Campagne
+                            </h3>
+                            {(!user.campaignsJoined || user.campaignsJoined.length === 0) ? (
+                                <div className="text-center py-8 text-gray-500">
+                                    <p>Non partecipi a nessuna campagna.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {user.campaignsJoined.map(cp => (
+                                        <div key={cp.campaign.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-100 pb-4 last:border-0 last:pb-0 gap-4">
+                                            <div className="flex items-center gap-4">
+                                                <img src={cp.campaign.image} className="w-12 h-12 object-cover border-2 border-black rounded-md" alt="" />
+                                                <div>
+                                                    <p className="font-bold uppercase text-sm md:text-base">{cp.campaign.title}</p>
+                                                    <p className="text-xs text-gray-600 flex items-center gap-1">
+                                                        <Shield className="w-3 h-3" /> {cp.character.name} (Lv.{cp.character.level})
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                                                <span className={`text-xs font-bold px-2 py-1 rounded border border-black ${cp.campaign.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
+                                                    cp.campaign.status === 'PAUSED' ? 'bg-yellow-100 text-yellow-800' :
+                                                        'bg-gray-100 text-gray-800'
+                                                    }`}>
+                                                    {cp.campaign.status}
+                                                </span>
                                             </div>
                                         </div>
                                     ))}

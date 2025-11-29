@@ -14,7 +14,8 @@ export interface User {
   stats?: UserStats;
   badges?: Badge[];
   bookings: Booking[];
-  registeredTournaments: string[]; // IDs of confirmed tournaments
+  registeredTournaments: { tournamentId: string; tournament: Tournament }[]; // IDs of confirmed tournaments
+  campaignsJoined: { campaignId: string; campaign: Campaign; character: Character }[];
   pendingRequests: string[]; // IDs of tournaments waiting for DM approval
 }
 

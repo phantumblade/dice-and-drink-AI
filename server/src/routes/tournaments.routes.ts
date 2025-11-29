@@ -114,4 +114,68 @@ router.post('/:id/join', async (req, res) => {
     }
 });
 
+// Create tournament
+router.post('/', async (req, res) => {
+    try {
+        const { title, date, type, gameId, slots, entryFee, image, description, prizes, rules } = req.body;
+
+        const tournament = await prisma.tournament.create({
+            data: {
+                title,
+                date: new Date(date),
+                type,
+                gameId: gameId || null,
+                slots,
+                entryFee,
+                image,
+                description,
+                prizes: prizes || '',
+                rules: rules || '',
+                status: 'upcoming',
+                filled: 0
+            }
+        });
+
+        res.status(201).json(tournament);
+    } catch (error) {
+        console.error('Error creating tournament:', error);
+        res.status(500).json({ error: 'Failed to create tournament' });
+    }
+});
+
+// Update tournament
+router.put('/:id', async (req, res) => {
+    try {
+        const { title, date, type, slots, entryFee, image, description, prizes, rules, status } = req.body;
+        const tournament = await prisma.tournament.update({
+            where: { id: req.params.id },
+            data: {
+                title,
+                date: date ? new Date(date) : undefined,
+                type,
+                slots,
+                entryFee,
+                image,
+                description,
+                prizes,
+                rules,
+                status
+            }
+        });
+        res.json(tournament);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to update tournament' });
+    }
+});
+
+// Delete tournament
+router.delete('/:id', async (req, res) => {
+    try {
+        await prisma.tournament.delete({ where: { id: req.params.id } });
+        res.json({ message: 'Tournament deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to delete tournament' });
+    }
+});
+
 export default router;

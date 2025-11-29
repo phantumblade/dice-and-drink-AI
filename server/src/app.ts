@@ -5,9 +5,12 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes';
 import productsRouter from './routes/products.routes';
 import tournamentsRouter from './routes/tournaments.routes';
+import bookingsRouter from './routes/bookings.routes';
+import adminRouter from './routes/admin.routes';
 import campaignsRouter from './routes/campaigns.routes';
 import usersRouter from './routes/users.routes';
 import charactersRouter from './routes/characters.routes';
+import notificationsRouter from './routes/notifications.routes';
 
 dotenv.config();
 
@@ -25,9 +28,12 @@ app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productsRouter);
 app.use('/api/tournaments', tournamentsRouter);
+app.use('/api/bookings', bookingsRouter);
+app.use('/api/admin', adminRouter);
 app.use('/api/campaigns', campaignsRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/characters', charactersRouter);
+app.use('/api/notifications', notificationsRouter);
 
 app.get('/', (req, res) => {
     res.send('Dice & Drink API is running');

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Users, ChevronRight, Swords, Scroll, Timer, CheckCircle, Info, Gift, BookOpen, Filter, AlertTriangle, Dice5, Calendar, Clock, Trophy, Target, Zap, UserPlus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Users, ChevronRight, Swords, Scroll, Timer, CheckCircle, Info, Gift, BookOpen, Filter, AlertTriangle, Dice5, Calendar, Clock, Trophy, Target, Zap, UserPlus, X } from 'lucide-react';
 import { useTournaments } from '../contexts/TournamentContext';
 import { useCampaigns } from '../contexts/CampaignContext';
 import { Tournament, Campaign, Product } from '../types';
@@ -10,6 +11,7 @@ import CampaignCard from '../components/CampaignCard';
 import CampaignRequestModal from '../components/CampaignRequestModal';
 import CampaignDetailModal from '../components/CampaignDetailModal';
 import ProductDetailModal from '../components/ProductDetailModal';
+import AuthModal from '../components/AuthModal';
 
 const Tournaments: React.FC = () => {
     const { user, registerForTournament, withdrawFromTournament } = useUser();
@@ -17,6 +19,7 @@ const Tournaments: React.FC = () => {
     const { campaigns } = useCampaigns();
     const { showToast } = useToast();
     const { getProduct } = useProducts();
+    const navigate = useNavigate();
 
     const [viewMode, setViewMode] = useState<'tournaments' | 'campaigns'>('tournaments');
     const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
@@ -41,7 +44,7 @@ const Tournaments: React.FC = () => {
         let list = activeTournaments;
 
         if (activeTab === 'my_tournaments' && user) {
-            const registeredIds = user.registeredTournaments || [];
+            const registeredIds = user.registeredTournaments?.map(rt => rt.tournamentId) || [];
             list = list.filter(t => registeredIds.includes(t.id));
         }
 
@@ -53,8 +56,13 @@ const Tournaments: React.FC = () => {
     }, [filterGame, activeTab, user, activeTournaments]);
 
     const filteredCampaigns = useMemo(() => {
-        return campaigns;
-    }, [campaigns]);
+        let list = campaigns;
+        if (activeTab === 'my_tournaments' && user) {
+            const joinedIds = user.campaignsJoined?.map(cp => cp.campaignId) || [];
+            list = list.filter(c => joinedIds.includes(c.id));
+        }
+        return list;
+    }, [campaigns, activeTab, user]);
 
     const stats = useMemo(() => {
         const totalTournaments = activeTournaments.length;
@@ -72,7 +80,7 @@ const Tournaments: React.FC = () => {
         }
     };
 
-    const isRegistered = (tournamentId: string) => user?.registeredTournaments?.includes(tournamentId) || false;
+    const isRegistered = (tournamentId: string) => user?.registeredTournaments?.some(t => t.tournamentId === tournamentId) || false;
 
     const getDaysRemaining = (dateString: string) => {
         const today = new Date();
@@ -99,6 +107,22 @@ const Tournaments: React.FC = () => {
             } else {
                 showToast('Dettagli del gioco non disponibili', 'info');
             }
+        }
+    };
+
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [showAuthModal, setShowAuthModal] = useState(false);
+
+    const handleJoin = async () => {
+        if (!selectedTournament) return;
+        if (!user) {
+            setShowAuthModal(true);
+            return;
+        }
+        const success = await registerForTournament(selectedTournament.id);
+        if (success) {
+            setShowSuccessModal(true);
+            setSelectedTournament(null);
         }
     };
 
@@ -394,7 +418,7 @@ const Tournaments: React.FC = () => {
                                     key={campaign.id}
                                     campaign={campaign}
                                     onRequestJoin={(c) => setSelectedCampaign(c)}
-                                    onViewDetails={(c) => setSelectedCampaignDetail(c)}
+                                    onViewDetails={(c) => navigate(`/campaigns/${c.id}`)}
                                 />
                             ))
                         )}
@@ -484,10 +508,7 @@ const Tournaments: React.FC = () => {
                                         </div>
                                     ) : (
                                         <button
-                                            onClick={() => {
-                                                registerForTournament(selectedTournament.id);
-                                                setSelectedTournament(null);
-                                            }}
+                                            onClick={handleJoin}
                                             className="w-full bg-black text-white py-5 font-black uppercase border-2 border-black hover:bg-neo-pink hover:text-white transition-all shadow-neo hover:shadow-none hover:translate-y-1 text-xl flex items-center justify-center gap-3"
                                         >
                                             Iscriviti Ora <Swords className="w-6 h-6" />
@@ -530,6 +551,45 @@ const Tournaments: React.FC = () => {
                     product={selectedProduct}
                     onClose={() => setSelectedProduct(null)}
                 />
+            )}
+            {/* Success Modal */}
+            {showSuccessModal && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-white border-4 border-black shadow-neo-lg max-w-md w-full p-8 text-center relative">
+                        <button
+                            onClick={() => setShowSuccessModal(false)}
+                            className="absolute top-4 right-4 p-2 hover:bg-gray-100 transition-colors"
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
+
+                        <div className="w-24 h-24 bg-neo-lime rounded-full border-4 border-black flex items-center justify-center mx-auto mb-6 shadow-neo animate-bounce">
+                            <CheckCircle className="w-12 h-12 text-black" />
+                        </div>
+
+                        <h2 className="text-3xl font-black uppercase mb-4">Iscrizione Confermata!</h2>
+                        <p className="text-lg font-medium text-gray-600 mb-8">
+                            Ti sei iscritto correttamente al torneo. Puoi monitorare lo stato della tua iscrizione direttamente dal tuo profilo.
+                        </p>
+
+                        <div className="space-y-3">
+                            <button
+                                onClick={() => setShowSuccessModal(false)}
+                                className="w-full bg-black text-white py-4 font-black uppercase text-xl border-2 border-black hover:bg-neo-lime hover:text-black transition-all shadow-neo hover:shadow-none"
+                            >
+                                Fantastico!
+                            </button>
+                            <p className="text-xs text-gray-400 font-bold uppercase">
+                                Riceverai una notifica se ci sono aggiornamenti
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Auth Modal */}
+            {showAuthModal && (
+                <AuthModal onClose={() => setShowAuthModal(false)} />
             )}
         </div>
     );

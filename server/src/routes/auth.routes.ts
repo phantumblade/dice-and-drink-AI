@@ -80,7 +80,7 @@ router.post('/login', async (req, res) => {
         // Fetch all user data
         const registeredTournaments = await prisma.tournamentParticipant.findMany({
             where: { userId: user.id },
-            select: { tournamentId: true }
+            include: { tournament: true }
         });
 
         // Tournament requests are not yet implemented in schema, returning empty
@@ -94,6 +94,8 @@ router.post('/login', async (req, res) => {
             include: { items: true }
         });
 
+        console.log(`Login successful for: ${email} (${user.role})`);
+
         res.json({
             token,
             user: {
@@ -102,7 +104,7 @@ router.post('/login', async (req, res) => {
                 email: user.email,
                 role: user.role,
                 avatar: user.avatar,
-                registeredTournaments: registeredTournaments.map(t => t.tournamentId),
+                registeredTournaments: registeredTournaments, // Return full objects
                 pendingRequests: pendingRequests,
                 badges,
                 bookings: bookings.map(b => ({
@@ -114,6 +116,10 @@ router.post('/login', async (req, res) => {
                     status: b.status,
                     items: b.items
                 })),
+                campaignsJoined: await prisma.campaignParticipant.findMany({
+                    where: { userId: user.id },
+                    include: { campaign: true, character: true }
+                }),
                 stats: {
                     xp: user.xp,
                     gamesPlayed: user.gamesPlayed,
@@ -124,6 +130,7 @@ router.post('/login', async (req, res) => {
             }
         });
     } catch (error) {
+        console.error('Login error:', error);
         res.status(500).json({ message: 'Error logging in', error });
     }
 });
