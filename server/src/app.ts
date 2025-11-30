@@ -15,9 +15,13 @@ import notificationsRouter from './routes/notifications.routes';
 dotenv.config();
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
-app.use(cors());
+// CORS Configuration
+app.use(cors({
+    origin: process.env.FRONTEND_URL || '*', // Allow all for now, lock down later
+    credentials: true
+}));
 app.use(express.json());
 
 // Serve static files from public/images and public/uploads
@@ -39,26 +43,9 @@ app.get('/', (req, res) => {
     res.send('Dice & Drink API is running');
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-    const os = require('os');
-    const networkInterfaces = os.networkInterfaces();
-    let networkIP = 'localhost';
-
-    // Find the first non-internal IPv4 address
-    for (const name of Object.keys(networkInterfaces)) {
-        for (const net of networkInterfaces[name]) {
-            if (net.family === 'IPv4' && !net.internal) {
-                networkIP = net.address;
-                break;
-            }
-        }
-        if (networkIP !== 'localhost') break;
-    }
-
+app.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`\n🎲 Dice & Drink Server Running!`);
     console.log(`📡 Local:    http://localhost:${PORT}`);
-    console.log(`🌐 Network:  http://${networkIP}:${PORT}`);
-    console.log(`\nUse the Network URL to access from your phone\n`);
 });
 
 export default app;
