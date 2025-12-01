@@ -695,7 +695,7 @@ async function main() {
             prizes: JSON.stringify({ first: 'Box Set', second: '10 Boosters', third: '5 Boosters' }),
             slots: 32,
             filled: 28,
-            status: 'upcoming',
+            status: 'ongoing',
             image: 'https://images.unsplash.com/photo-1593508512255-86ab42a8e620?auto=format&fit=crop&q=80&w=600&h=600',
             description: 'Il classico appuntamento del venerdì sera. Porta il tuo mazzo standard.',
             rules: 'Formato Standard. Turni alla svizzera da 50 minuti.',
@@ -933,7 +933,7 @@ async function main() {
             prizes: JSON.stringify({ random: 'Promo Packs' }),
             slots: 40,
             filled: 35,
-            status: 'upcoming',
+            status: 'ongoing',
             image: 'https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?auto=format&fit=crop&q=80&w=600&h=600',
             description: 'Serata Commander multiplayer.',
             rules: 'Rule 0 discussion encouraged.',
@@ -944,7 +944,7 @@ async function main() {
     for (const t of tournaments) {
         await prisma.tournament.upsert({
             where: { id: t.id },
-            update: {},
+            update: t, // Update fields if it exists
             create: t,
         });
     }

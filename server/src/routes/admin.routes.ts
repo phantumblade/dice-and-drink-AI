@@ -68,7 +68,7 @@ router.get('/charts', async (req, res) => {
             if (!acc[gameName]) {
                 acc[gameName] = { name: gameName, participants: 0, tournaments: 0 };
             }
-            acc[gameName].participants += t._count.participants;
+            acc[gameName].participants += t.filled;
             acc[gameName].tournaments += 1;
             return acc;
         }, {});
