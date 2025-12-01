@@ -1,13 +1,15 @@
 import { GoogleGenAI } from "@google/genai";
 
 // Initialize the client
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 /**
  * Uses Gemini 3 Pro Preview with Thinking Mode for complex assistant queries.
  */
 export const askAiAssistant = async (prompt: string): Promise<string> => {
   try {
+    if (!ai) return "AI non configurata (Manca API Key).";
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: prompt,
@@ -28,13 +30,14 @@ export const askAiAssistant = async (prompt: string): Promise<string> => {
  */
 export const editProductImage = async (base64Image: string, mimeType: string, prompt: string): Promise<string | null> => {
   try {
+    if (!ai) return null;
     const imagePart = {
       inlineData: {
         mimeType: mimeType,
         data: base64Image,
       },
     };
-    
+
     const textPart = {
       text: prompt
     };
@@ -48,13 +51,13 @@ export const editProductImage = async (base64Image: string, mimeType: string, pr
 
     // Iterate to find the image part in the response
     for (const candidate of response.candidates || []) {
-        if (candidate.content?.parts) {
-            for (const part of candidate.content.parts) {
-                if (part.inlineData && part.inlineData.data) {
-                    return part.inlineData.data;
-                }
-            }
+      if (candidate.content?.parts) {
+        for (const part of candidate.content.parts) {
+          if (part.inlineData && part.inlineData.data) {
+            return part.inlineData.data;
+          }
         }
+      }
     }
     return null;
   } catch (error) {
