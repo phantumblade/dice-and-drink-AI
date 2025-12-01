@@ -4,7 +4,7 @@ export const MOCK_USER: User = {
   id: 'u1',
   name: 'Alex Gamer',
   email: 'alex@example.com',
-  role: UserRole.CUSTOMER, 
+  role: UserRole.CUSTOMER,
   avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=400&h=400',
   stats: {
     gamesPlayed: 42,
@@ -20,6 +20,7 @@ export const MOCK_USER: User = {
   ],
   bookings: [],
   registeredTournaments: [],
+  campaignsJoined: [],
   pendingRequests: []
 };
 
@@ -33,7 +34,7 @@ export const PRODUCTS: Product[] = [
     name: 'Catan',
     category: ProductCategory.GAME,
     description: 'Raccogli risorse e costruisci insediamenti in questo classico gioco di strategia. Perfetto per rovinare amicizie di lunga data.',
-    price: 0, 
+    price: 0,
     image: getUrl('1610890716271-e2fe9e94a541'),
     tags: ['Strategia', 'Famiglia', 'Commercio'],
     rating: 4.8,
@@ -112,7 +113,7 @@ export const PRODUCTS: Product[] = [
     players: '1-5',
     duration: '115m'
   },
-  
+
   // --- DRINKS ---
   {
     id: 'd1',
@@ -223,16 +224,18 @@ export const TOURNAMENTS: Tournament[] = [
     frequency: 'Settimanale',
     includes: ['1 Booster Pack', 'Drink Piccolo'],
     rules: 'Formato Standard. Turni alla svizzera da 50 minuti.',
+    entryFee: 5,
+    prizes: { first: '3 Boosters', second: '1 Booster' },
     slots: 32,
     filled: 28,
     status: 'upcoming',
     image: getUrl('1593508512255-86ab42a8e620'),
     description: 'Il classico appuntamento del venerdì sera. Porta il tuo mazzo standard e competi per premi in bustine e carte promo.',
-    participantsList: [
-        { name: 'Jace B.', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jace' },
-        { name: 'Liliana V.', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Lili' },
-        { name: 'Chandra N.', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Chandra' },
-        { name: 'Garruk', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Garruk' }
+    participants: [
+      { id: 'tp1', joinedAt: '2023-11-20', user: { id: 'u5', name: 'Jace B.', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jace' } },
+      { id: 'tp2', joinedAt: '2023-11-20', user: { id: 'u6', name: 'Liliana V.', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Lili' } },
+      { id: 'tp3', joinedAt: '2023-11-20', user: { id: 'u7', name: 'Chandra N.', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Chandra' } },
+      { id: 'tp4', joinedAt: '2023-11-20', user: { id: 'u8', name: 'Garruk', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Garruk' } }
     ]
   },
   {
@@ -244,17 +247,19 @@ export const TOURNAMENTS: Tournament[] = [
     frequency: 'One-shot (4 Ore)',
     includes: ['Personaggio Pre-generato', 'Snack al Tavolo'],
     rules: 'Livello 5. Point Buy. Manuali ufficiali concessi.',
+    entryFee: 10,
+    prizes: { participation: 'Dice Set' },
     slots: 6,
     filled: 4,
     status: 'upcoming',
-    dm: 'Matt M.',
+    // dm: 'Matt M.', // Removed as not in Tournament type
     image: getUrl('1519074069444-1ba4fff66d16'),
     description: 'Una tetra avventura horror investigativa. Il villaggio di Krezk è silenzioso... troppo silenzioso. Richiesta approvazione del Master.',
-    participantsList: [
-        { name: 'Laura', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Laura' },
-        { name: 'Travis', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Travis' },
-        { name: 'Sam', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sam' },
-        { name: 'Liam', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Liam' }
+    participants: [
+      { id: 'tp5', joinedAt: '2023-11-20', user: { id: 'u9', name: 'Laura', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Laura' } },
+      { id: 'tp6', joinedAt: '2023-11-20', user: { id: 'u10', name: 'Travis', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Travis' } },
+      { id: 'tp7', joinedAt: '2023-11-20', user: { id: 'u11', name: 'Sam', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sam' } },
+      { id: 'tp8', joinedAt: '2023-11-20', user: { id: 'u12', name: 'Liam', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Liam' } }
     ]
   },
   {
@@ -265,12 +270,14 @@ export const TOURNAMENTS: Tournament[] = [
     gameSystem: 'Catan',
     frequency: 'Evento Unico',
     includes: ['Pranzo', 'Trofeo'],
+    entryFee: 15,
+    prizes: { winner: 'Trophy + Qualification' },
     slots: 16,
     filled: 16,
     status: 'completed',
     image: getUrl('1605518216938-7f31b709d043'),
     description: 'Qualificazione regionale per il campionato nazionale. Scontri diretti a 4 giocatori.',
-    participantsList: []
+    participants: []
   },
   {
     id: 't4',
@@ -281,14 +288,16 @@ export const TOURNAMENTS: Tournament[] = [
     frequency: 'Mensile',
     includes: ['Drink'],
     rules: '5+0 Blitz. Doppia Eliminazione.',
+    entryFee: 2,
+    prizes: { winner: 'Free Drink' },
     slots: 20,
     filled: 12,
     status: 'upcoming',
     image: getUrl('1529699218752-1d0e03809201'),
     description: 'Torneo lampo per chi pensa veloce. Orologio da 5 minuti, nessun incremento. Toccato-mosso.',
-    participantsList: [
-        { name: 'Magnus', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Magnus' },
-        { name: 'Hikaru', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Hikaru' }
+    participants: [
+      { id: 'tp9', joinedAt: '2023-11-20', user: { id: 'u13', name: 'Magnus', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Magnus' } },
+      { id: 'tp10', joinedAt: '2023-11-20', user: { id: 'u14', name: 'Hikaru', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Hikaru' } }
     ]
   }
 ];
@@ -306,16 +315,20 @@ export const MOCK_REVENUE_DATA = [
 export const MOCK_CAMPAIGNS: Campaign[] = [
   {
     id: 'c1',
-    tournamentId: 't2', // Linked to the tournament logic
     title: 'Maledizione di Strahd',
+    type: 'LONG_CAMPAIGN',
     system: 'D&D 5e',
-    dm: 'Dungeon Master X',
+    dm: { id: 'dm1', name: 'Dungeon Master X', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=DMX' },
+    startDate: '2023-10-01',
+    frequency: 'Settimanale',
+    status: 'ACTIVE',
     image: getUrl('1519074069444-1ba4fff66d16'),
     description: 'Una campagna di horror gotico nelle terre di Barovia.',
-    party: [
-      { id: 'ch1', name: 'Grommash', class: 'Barbaro', level: 5, race: 'Orco', status: 'Alive', player: 'Alex', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Grom' },
-      { id: 'ch2', name: 'Elara', class: 'Mago', level: 5, race: 'Elfo', status: 'Alive', player: 'Sarah', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Elara' },
-      { id: 'ch3', name: 'Stabby', class: 'Ladro', level: 5, race: 'Halfling', status: 'Dead', player: 'Mike', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Stabby' }
+    levelRange: '1-10',
+    participants: [
+      { id: 'cp1', joinedAt: '2023-10-01', user: { id: 'u1', name: 'Alex', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex' }, character: { id: 'ch1', userId: 'u1', name: 'Grommash', class: 'Barbaro', level: 5, race: 'Orco', status: 'ALIVE', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Grom', stats: {}, skills: {}, hp: 50, maxHp: 50 } },
+      { id: 'cp2', joinedAt: '2023-10-01', user: { id: 'u2', name: 'Sarah', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah' }, character: { id: 'ch2', userId: 'u2', name: 'Elara', class: 'Mago', level: 5, race: 'Elfo', status: 'ALIVE', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Elara', stats: {}, skills: {}, hp: 30, maxHp: 30 } },
+      { id: 'cp3', joinedAt: '2023-10-01', user: { id: 'u3', name: 'Mike', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mike' }, character: { id: 'ch3', userId: 'u3', name: 'Stabby', class: 'Ladro', level: 5, race: 'Halfling', status: 'DEAD', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Stabby', stats: {}, skills: {}, hp: 0, maxHp: 35 } }
     ],
     sessions: [
       { id: 's1', title: 'Nella Nebbia', date: '2023-10-01', summary: 'Il gruppo è entrato a Barovia ed è stato subito attaccato dai lupi.', location: 'Boschi di Svalich' },
@@ -329,13 +342,18 @@ export const MOCK_CAMPAIGNS: Campaign[] = [
   {
     id: 'c2',
     title: 'Cyberpunk Red: Pioggia al Neon',
+    type: 'SHORT_CAMPAIGN',
     system: 'Cyberpunk Red',
-    dm: 'Netrunner V',
+    dm: { id: 'dm2', name: 'Netrunner V', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=V' },
+    startDate: '2023-11-01',
+    frequency: 'Settimanale',
+    status: 'ACTIVE',
     image: getUrl('1533109721025-d1ae7ee7c1e1'),
     description: 'Alta tecnologia, bassa vita. Sopravvivere a Night City un ingaggio alla volta.',
-    party: [
-      { id: 'ch4', name: 'Zero', class: 'Netrunner', level: 3, race: 'Umano', status: 'Alive', player: 'Alex', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zero' },
-      { id: 'ch5', name: 'Tank', class: 'Solo', level: 3, race: 'Cyborg', status: 'Alive', player: 'Dave', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Tank' }
+    levelRange: '1-5',
+    participants: [
+      { id: 'cp4', joinedAt: '2023-11-01', user: { id: 'u1', name: 'Alex', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex' }, character: { id: 'ch4', userId: 'u1', name: 'Zero', class: 'Netrunner', level: 3, race: 'Umano', status: 'ALIVE', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zero', stats: {}, skills: {}, hp: 25, maxHp: 25 } },
+      { id: 'cp5', joinedAt: '2023-11-01', user: { id: 'u4', name: 'Dave', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Dave' }, character: { id: 'ch5', userId: 'u4', name: 'Tank', class: 'Solo', level: 3, race: 'Cyborg', status: 'ALIVE', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Tank', stats: {}, skills: {}, hp: 40, maxHp: 40 } }
     ],
     sessions: [
       { id: 's3', title: 'Il Furto Dati', date: '2023-11-15', summary: 'Infiltrati nella torre Arasaka. Le cose si sono fatte rumorose.', location: 'Torre Arasaka' }

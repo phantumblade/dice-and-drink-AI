@@ -62,4 +62,32 @@ router.get('/:id', async (req, res) => {
     }
 });
 
+// Update character
+router.put('/:id', async (req, res) => {
+    const { name, race, class: charClass, level, stats, skills, background, alignment, avatar, hp, maxHp, status } = req.body;
+    try {
+        const character = await prisma.character.update({
+            where: { id: req.params.id },
+            data: {
+                name,
+                race,
+                class: charClass,
+                level,
+                stats: typeof stats === 'string' ? stats : JSON.stringify(stats),
+                skills: typeof skills === 'string' ? skills : JSON.stringify(skills),
+                background,
+                alignment,
+                avatar,
+                hp,
+                maxHp,
+                status
+            }
+        });
+        res.json(character);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to update character' });
+    }
+});
+
 export default router;

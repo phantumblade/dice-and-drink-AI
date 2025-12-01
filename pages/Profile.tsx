@@ -8,7 +8,9 @@ import { useToast } from '../contexts/ToastContext';
 import CharacterCard from '../components/CharacterCard';
 import CharacterCreationModal from '../components/CharacterCreationModal';
 import DMDashboard from '../components/DMDashboard';
+import CharacterSheetModal from '../components/CharacterSheetModal';
 import Dashboard from './Dashboard'; // Import Dashboard component
+import { getAvatarUrl } from '../utils/url';
 
 interface ProfileProps {
     user: User;
@@ -23,6 +25,7 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
     const [activeTab, setActiveTab] = useState<'overview' | 'characters' | 'dm'>('overview');
     const [characters, setCharacters] = useState<Character[]>([]);
     const [showCharModal, setShowCharModal] = useState(false);
+    const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [editForm, setEditForm] = useState({
@@ -109,7 +112,7 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
                             <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
                                 <div className="w-32 h-32 md:w-40 md:h-40 border-4 border-white shadow-neo bg-gray-200 overflow-hidden relative">
                                     <img
-                                        src={user.avatar || 'https://via.placeholder.com/150'}
+                                        src={getAvatarUrl(user.avatar) || 'https://via.placeholder.com/150'}
                                         alt={user.name}
                                         className="w-full h-full object-cover"
                                     />
@@ -374,7 +377,11 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {characters.map(char => (
-                                <CharacterCard key={char.id} character={char} />
+                                <CharacterCard
+                                    key={char.id}
+                                    character={char}
+                                    onClick={() => setSelectedCharacter(char)}
+                                />
                             ))}
                         </div>
                     )}
@@ -428,6 +435,14 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
                 <CharacterCreationModal
                     onClose={() => setShowCharModal(false)}
                     onCreated={fetchCharacters}
+                />
+            )}
+
+            {/* Character Sheet Modal (View/Edit) */}
+            {selectedCharacter && (
+                <CharacterSheetModal
+                    character={selectedCharacter}
+                    onClose={() => setSelectedCharacter(null)}
                 />
             )}
         </div>

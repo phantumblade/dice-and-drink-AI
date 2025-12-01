@@ -209,6 +209,44 @@ const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({ character, on
                         </div>
                     </div>
                 </div>
+
+                {/* Campaign History Section */}
+                <div className="p-8 pt-0">
+                    <div className="bg-white border-2 border-black p-6 shadow-sm">
+                        <h3 className="font-black uppercase text-xl mb-4 border-b-2 border-black pb-2 flex items-center gap-2">
+                            <Scroll className="w-5 h-5" /> Storico Campagne
+                        </h3>
+
+                        {(!user?.campaignsJoined || user.campaignsJoined.filter((cj: any) => cj.character.id === character.id).length === 0) ? (
+                            <div className="text-center py-8 text-gray-500 italic">
+                                Questo personaggio non ha ancora partecipato a nessuna campagna.
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {user.campaignsJoined
+                                    .filter((cj: any) => cj.character.id === character.id)
+                                    .map((cj: any) => (
+                                        <div key={cj.campaign.id} className="flex items-center gap-4 p-3 border border-gray-200 bg-gray-50 hover:bg-white hover:border-black transition-all">
+                                            <img src={cj.campaign.image} alt={cj.campaign.title} className="w-16 h-16 object-cover border border-black" />
+                                            <div className="flex-1">
+                                                <h4 className="font-black uppercase text-sm">{cj.campaign.title}</h4>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded border ${cj.campaign.status === 'ACTIVE' ? 'bg-green-100 text-green-800 border-green-200' :
+                                                            cj.campaign.status === 'COMPLETED' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                                                                'bg-gray-100 text-gray-600 border-gray-200'
+                                                        }`}>
+                                                        {cj.campaign.status === 'ACTIVE' ? 'In Corso' :
+                                                            cj.campaign.status === 'COMPLETED' ? 'Completata' : cj.campaign.status}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                }
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );

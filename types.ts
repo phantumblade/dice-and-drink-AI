@@ -198,7 +198,15 @@ export interface Campaign {
   sessions?: Session[];
   notes?: CampaignNote[];
   _count?: {
-    participants: number;
     requests: number;
   };
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: 'SUCCESS' | 'ERROR' | 'INFO';
+  message: string;
+  read: boolean;
+  createdAt: string;
 }

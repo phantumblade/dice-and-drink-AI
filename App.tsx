@@ -20,6 +20,7 @@ import { ProductProvider } from './contexts/ProductContext';
 import { TournamentProvider } from './contexts/TournamentContext';
 import { CampaignProvider } from './contexts/CampaignContext';
 import { ToastProvider } from './contexts/ToastContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 
 const AppContent: React.FC = () => {
   const { user } = useUser();
@@ -84,7 +85,9 @@ const App: React.FC = () => {
           <CartProvider>
             <TournamentProvider>
               <CampaignProvider>
-                <AppContent />
+                <NotificationProvider>
+                  <AppContent />
+                </NotificationProvider>
               </CampaignProvider>
             </TournamentProvider>
           </CartProvider>

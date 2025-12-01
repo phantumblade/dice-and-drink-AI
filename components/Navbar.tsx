@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Dice5, LogOut, ShieldAlert, User as UserIcon, UserPlus } from 'lucide-react';
+import { Menu, X, Dice5, LogOut, ShieldAlert, User as UserIcon, UserPlus, Bell, Check } from 'lucide-react';
 import { UserRole } from '../types';
 import { useUser } from '../contexts/UserContext';
+import { useNotifications } from '../contexts/NotificationContext';
 import AuthModal from './AuthModal';
 
 const Navbar: React.FC = () => {
   const { user, logout } = useUser();
+  const { unreadCount, notifications, markAsRead } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const location = useLocation();
 
   const isActive = (path: string) => location.pathname === path;
@@ -56,6 +59,52 @@ const Navbar: React.FC = () => {
             <div className="hidden md:block">
               {user ? (
                 <div className="flex items-center gap-4">
+                  {/* Notifications */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowNotifications(!showNotifications)}
+                      className="relative p-2 hover:bg-neo-bg border-2 border-transparent hover:border-black transition-all"
+                    >
+                      <Bell className={`w-5 h-5 ${unreadCount > 0 ? 'text-neo-violet animate-pulse' : 'text-gray-600'}`} />
+                      {unreadCount > 0 && (
+                        <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border border-black">
+                          {unreadCount}
+                        </span>
+                      )}
+                    </button>
+
+                    {showNotifications && (
+                      <div className="absolute right-0 mt-2 w-80 bg-white border-2 border-black shadow-neo z-50 animate-in fade-in slide-in-from-top-2">
+                        <div className="p-3 border-b-2 border-black bg-neo-bg flex justify-between items-center">
+                          <span className="font-black uppercase text-sm">Notifiche</span>
+                          {unreadCount > 0 && <span className="text-xs font-bold text-neo-violet">{unreadCount} nuove</span>}
+                        </div>
+                        <div className="max-h-64 overflow-y-auto">
+                          {notifications.length === 0 ? (
+                            <div className="p-4 text-center text-gray-500 text-sm italic">Nessuna notifica</div>
+                          ) : (
+                            notifications.map(n => (
+                              <div key={n.id} className={`p-3 border-b border-gray-100 hover:bg-gray-50 transition-colors ${!n.read ? 'bg-blue-50/50' : ''}`}>
+                                <div className="flex gap-3">
+                                  <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${!n.read ? 'bg-neo-violet' : 'bg-gray-300'}`} />
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium leading-tight mb-1">{n.message}</p>
+                                    <p className="text-[10px] text-gray-400 uppercase">{new Date(n.createdAt).toLocaleDateString()}</p>
+                                  </div>
+                                  {!n.read && (
+                                    <button onClick={() => markAsRead(n.id)} className="text-gray-400 hover:text-neo-green" title="Segna come letto">
+                                      <Check className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   <Link to="/profile" className="flex items-center gap-2 text-sm font-bold border-2 border-black px-3 py-1 bg-neo-bg shadow-neo-sm hover:bg-neo-yellow transition-colors">
                     {user.role === UserRole.ADMIN && <ShieldAlert className="w-4 h-4 text-neo-pink" />}
                     <UserIcon className="w-4 h-4" />
