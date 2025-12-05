@@ -33,14 +33,16 @@ model User {
   registeredTournaments TournamentParticipant[]
 
   // D&D Relations
-  characters       Character[]
-  campaignsOwned   Campaign[]            @relation("DungeonMaster")
-  campaignsJoined  CampaignParticipant[]
-  campaignRequests CampaignRequest[]
+  characters        Character[]
+  campaignsOwned    Campaign[]            @relation("DungeonMaster")
+  campaignsProposed Campaign[]            @relation("CampaignProposer")
+  campaignsJoined   CampaignParticipant[]
+  campaignRequests  CampaignRequest[]
 
   // Tournament Wins
   tournamentsWon Tournament[]   @relation("TournamentWinner")
   notifications  Notification[]
+  campaignNotes  CampaignNote[]
 }
 
 model Badge {
@@ -165,7 +167,16 @@ model Campaign {
   // Content
   image       String
   description String
+  rules       String? // DM Rules (markdown)
+  plot        String? // Basic Plot/Theme (markdown)
+  minPlayers  Int     @default(3)
   levelRange  String // e.g., "1-5", "10+"
+
+  // Proposal System
+  isProposal     Boolean @default(false)
+  proposalStatus String? // "PENDING", "APPROVED", "DM_ASSIGNED", "READY"
+  proposerId     String?
+  proposer       User?   @relation("CampaignProposer", fields: [proposerId], references: [id])
 
   // Relations
   participants CampaignParticipant[]
@@ -201,8 +212,9 @@ model Character {
   avatar String
 
   // Relations
-  campaigns CampaignParticipant[]
-  requests  CampaignRequest[]
+  campaigns     CampaignParticipant[]
+  requests      CampaignRequest[]
+  campaignNotes CampaignNote[]
 }
 
 model CampaignRequest {
@@ -235,6 +247,7 @@ model CampaignParticipant {
   joinedAt DateTime @default(now())
 
   @@unique([campaignId, characterId])
+  @@unique([campaignId, userId]) // Enforce 1 character per user per campaign
 }
 
 model Session {
@@ -255,12 +268,20 @@ model Session {
 }
 
 model CampaignNote {
-  id         String   @id @default(uuid())
-  title      String
-  content    String
-  type       String // "Lore", "NPC", "Location", "Loot"
+  id        String   @id @default(uuid())
+  title     String? // Optional for chat messages
+  content   String
+  type      String   @default("CHAT") // "CHAT", "LORE", "NPC", "LOCATION", "LOOT"
+  createdAt DateTime @default(now())
+
   campaignId String
   campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  // Authorship
+  userId      String
+  user        User       @relation(fields: [userId], references: [id])
+  characterId String?
+  character   Character? @relation(fields: [characterId], references: [id])
 }
 
 model Notification {

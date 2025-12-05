@@ -172,9 +172,22 @@ export interface Session {
 
 export interface CampaignNote {
   id: string;
-  title: string;
+  title?: string;
   content: string;
-  type: 'Lore' | 'NPC' | 'Location' | 'Loot';
+  type: 'CHAT' | 'Lore' | 'NPC' | 'Location' | 'Loot';
+  createdAt: string;
+  userId: string;
+  characterId?: string;
+  user?: {
+    id: string;
+    name: string;
+    avatar: string;
+  };
+  character?: {
+    id: string;
+    name: string;
+    avatar: string;
+  };
 }
 
 export interface Campaign {
@@ -193,12 +206,25 @@ export interface Campaign {
   image: string;
   description: string;
   levelRange: string;
+  rules?: string;
+  plot?: string;
+  minPlayers?: number;
+  maxPlayers?: number;
+  isProposal?: boolean;
+  proposalStatus?: string;
+  proposer?: {
+    id: string;
+    name: string;
+    avatar: string;
+  };
+
   participants: CampaignParticipant[];
   requests?: CampaignRequest[];
   sessions?: Session[];
   notes?: CampaignNote[];
   _count?: {
     requests: number;
+    participants: number;
   };
 }
 

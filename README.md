@@ -138,6 +138,7 @@ Strumenti specializzati per Dungeon Master e avventurieri.
 - **Gestione Campagne**: Note, sessioni e lore
 - **Schede Personaggio**: Statistiche e progressione
 - **AI Dungeon Master**: Assistente virtuale basato su Gemini per generare idee e trame
+- **Showcase Mode**: Campagna dimostrativa pre-caricata per esplorare le funzionalità
 
 ### 🛍️ Catalogo & Prenotazioni
 Sistema di ordinazione e prenotazione semplificato.

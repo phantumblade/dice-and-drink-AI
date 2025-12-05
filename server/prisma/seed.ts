@@ -2,6 +2,17 @@ import prisma from '../src/prisma';
 import * as bcrypt from 'bcrypt';
 
 async function main() {
+    // 0. CLEANUP (Optional: remove if you want to keep old data)
+    console.log('🧹 Cleaning up database...');
+    // Delete in order of dependencies (child first)
+    await prisma.campaignNote.deleteMany({});
+    await prisma.session.deleteMany({});
+    await prisma.campaignParticipant.deleteMany({});
+    await prisma.campaignRequest.deleteMany({});
+    await prisma.campaign.deleteMany({});
+    // await prisma.character.deleteMany({}); // Keep characters if possible
+    // await prisma.tournament.deleteMany({});
+
     // 1. Create Users
     const password = await bcrypt.hash('password123', 10);
 
@@ -954,48 +965,66 @@ async function main() {
     // 5. Create Campaigns
     const campaigns = [
         {
-            title: 'Maledizione di Strahd',
+            title: 'L\'Ombra del Re Stregone',
             type: 'LONG_CAMPAIGN',
             system: 'D&D 5e',
             dmId: dmVal.id,
-            startDate: new Date('2025-11-01'),
-            frequency: 'Weekly',
+            startDate: new Date('2025-09-15'),
+            frequency: 'Venerdì (21:00)',
             status: 'ACTIVE',
-            image: 'https://images.unsplash.com/photo-1519074069444-1ba4fff66d16?auto=format&fit=crop&q=80&w=600&h=600',
-            description: 'Una campagna gotica horror nel regno di Barovia. I giocatori dovranno affrontare il conte Strahd von Zarovich.',
-            levelRange: '1-10',
+            image: '/images/D&Dcard.png',
+            description: 'Un\'antica minaccia si risveglia nel nord. Le nebbie si addensano e i morti camminano. Il Re Stregone di Angmar è tornato, e cerca l\'anello del potere perduto da secoli nella Valle dei Re. Il gruppo dovrà unire le forze per impedire l\'apocalisse.',
+            levelRange: '5-12',
+            rules: '**Regole della Casa:**\n- Critici fanno danno massimo + dado.\n- Pozioni si bevono come azione bonus.\n- Niente Evil alignment senza approvazione.\n- Rispetto assoluto al tavolo.',
+            plot: 'Il Re Stregone è in realtà il padre del Paladino, corrotto da un patto oscuro. Il talismano che cercano è diviso in 3 frammenti.',
+            minPlayers: 4,
+            maxPlayers: 6,
             sessions: [
-                { title: 'L\'arrivo nella nebbia', date: new Date('2025-11-01'), summary: 'Il gruppo è stato trasportato a Barovia.', location: 'Svalich Woods' }
+                { title: 'Sessione 0: La Locanda', date: new Date('2025-09-15'), summary: 'Creazione schede e background. Primo incontro alla locanda del Puledro Impennato.', location: 'Brea' },
+                { title: 'S1: L\'Agguato dei Goblin', date: new Date('2025-09-22'), summary: 'Il gruppo ha sconfitto l\'avanguardia goblin e trovato la mappa antica.', location: 'Foresta Vecchia' },
+                { title: 'S2: Il Tempio Dimenticato', date: new Date('2025-09-29'), summary: 'Scoperta la prima runa di potere. Il Chierico è quasi morto per una trappola.', location: 'Rovine di Arnor' },
+                { title: 'S3: Tradimento!', date: new Date('2025-10-06'), summary: 'L\'NPC guida si è rivelato un cultista. Combattimento epico sul ponte di pietra.', location: 'Ponte dei Sospiri' },
+                { title: 'S4: Riposo Lungo', date: new Date('2025-10-13'), summary: 'Shopping session in città. Nuove armi per il Barbaro.', location: 'Gran Burrone' }
             ],
             notes: [
-                { title: 'Strahd', content: 'Il signore vampiro.', type: 'NPC' }
+                { title: 'Profezia', content: 'Quando le tre lune si allineano, il cancello si aprirà.', type: 'Lore', userId: dmVal.id },
+                { title: 'Drophar il Mercante', content: 'Nano avido ma onesto. Vende pozioni a metà prezzo se gli portate funghi rari.', type: 'NPC', userId: dmVal.id },
+                { title: 'Spada delle Anime', content: '+2 Longsword, richiede attunement. Parla nella testa di chi la usa.', type: 'Loot', userId: dmVal.id },
+                { content: 'Ragazzi per venerdì chi porta le patatine?', type: 'CHAT', userId: dmVal.id, createdAt: new Date('2025-10-14T10:00:00').toISOString() },
+                { content: 'Io porto birra e pretzel!', type: 'CHAT', userId: 'u1', createdAt: new Date('2025-10-14T10:05:00').toISOString() },
+                { content: 'Il master ha detto che livelliamo?', type: 'CHAT', userId: 'u1', createdAt: new Date('2025-10-14T10:30:00').toISOString() },
+                { content: 'Se sopravvivete al boss di fine dungeon... forse.', type: 'CHAT', userId: dmVal.id, createdAt: new Date('2025-10-14T10:35:00').toISOString() },
             ]
         },
         {
-            title: 'Cyberpunk Red: Night City Stories',
+            title: 'Cyberpunk: Neon Rain',
             type: 'SHORT_CAMPAIGN',
             system: 'Cyberpunk Red',
             dmId: dmVal.id,
             startDate: new Date('2026-01-15'),
-            frequency: 'Bi-weekly',
+            frequency: 'Bi-settimanale',
             status: 'RECRUITING',
-            image: 'https://images.unsplash.com/photo-1533109721025-d1ae7ee7c1e1?auto=format&fit=crop&q=80&w=600&h=600',
-            description: 'Sopravvivi nelle strade di Night City. High tech, low life.',
+            image: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1200&auto=format&fit=crop',
+            description: 'Un colpo alla Arasaka Tower andato male. Ora tutta Night City vi dà la caccia. Avete 72 ore per pulire il vostro nome o finire in discarica.',
             levelRange: 'Rank 4',
+            minPlayers: 3,
+            maxPlayers: 5,
             sessions: [],
             notes: []
         },
         {
-            title: 'Pathfinder: Kingmaker',
-            type: 'LONG_CAMPAIGN',
-            system: 'Pathfinder 2e',
+            title: 'Call of Cthulhu: Il Faro',
+            type: 'ONE_SHOT',
+            system: 'Call of Cthulhu 7e',
             dmId: dmVal.id,
-            startDate: new Date('2025-10-01'),
-            frequency: 'Weekly',
-            status: 'PAUSED',
-            image: 'https://images.unsplash.com/photo-1605806616949-1e87b487bc2a?auto=format&fit=crop&q=80&w=600&h=600',
-            description: 'Costruisci il tuo regno nelle Stolen Lands.',
-            levelRange: '1-20',
+            startDate: new Date('2025-12-24'),
+            frequency: 'One-Shot',
+            status: 'RECRUITING',
+            image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1200&auto=format&fit=crop',
+            description: 'Un faro isolato sulla costa del Maine. Il custode è scomparso. E le stelle stanno iniziando a muoversi in modi sbagliati.',
+            levelRange: 'Investigatori',
+            minPlayers: 2,
+            maxPlayers: 4,
             sessions: [],
             notes: []
         }
@@ -1014,6 +1043,10 @@ async function main() {
                 image: c.image,
                 description: c.description,
                 levelRange: c.levelRange,
+                rules: c.rules, // Added field
+                plot: c.plot,   // Added field
+                minPlayers: c.minPlayers, // Added field
+                maxPlayers: c.maxPlayers, // Added field
                 sessions: {
                     create: c.sessions
                 },
@@ -1024,14 +1057,39 @@ async function main() {
         });
     }
 
-    // Add Alex to Strahd campaign
-    const strahdCampaign = await prisma.campaign.findFirst({ where: { title: 'Maledizione di Strahd' } });
-    if (strahdCampaign) {
+    // Add Alex to 'L'Ombra del Re Stregone' campaign
+    const epicCampaign = await prisma.campaign.findFirst({ where: { title: 'L\'Ombra del Re Stregone' } });
+    if (epicCampaign) {
+        // Add Alex (Barbarian)
         await prisma.campaignParticipant.create({
             data: {
-                campaignId: strahdCampaign.id,
+                campaignId: epicCampaign.id,
                 characterId: char1.id,
                 userId: alex.id
+            }
+        });
+
+        // Add a second dummy character for variety using DM user as player just for visuals
+        const rogueInfo = await prisma.character.create({
+            data: {
+                user: { connect: { id: dmVal.id } },
+                name: 'Vanya',
+                race: 'Elf',
+                class: 'Rogue',
+                level: 5,
+                status: 'ALIVE',
+                avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Vanya',
+                stats: JSON.stringify({ str: 10, dex: 20, con: 12, int: 14, wis: 12, cha: 10 }),
+                skills: JSON.stringify(['Stealth', 'Sleight of Hand']),
+                hp: 45, maxHp: 45, background: 'Criminal', alignment: 'Neutral'
+            }
+        })
+
+        await prisma.campaignParticipant.create({
+            data: {
+                campaignId: epicCampaign.id,
+                characterId: rogueInfo.id,
+                userId: dmVal.id
             }
         });
     }

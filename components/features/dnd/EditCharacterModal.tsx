@@ -60,113 +60,113 @@ const EditCharacterModal: React.FC<EditCharacterModalProps> = ({ character, isOp
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-            <div className="bg-zinc-900 border-2 border-neo-violet shadow-neo-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white border-4 border-black shadow-neo-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-in zoom-in duration-200">
 
                 {/* Header */}
-                <div className="sticky top-0 z-10 flex items-center justify-between p-4 bg-zinc-900 border-b border-white/10">
-                    <h2 className="text-2xl font-black text-white font-display italic">
-                        MODIFICA <span className="text-neo-violet">{character.name.toUpperCase()}</span>
+                <div className="sticky top-0 z-10 flex items-center justify-between p-6 bg-neo-lime border-b-4 border-black">
+                    <h2 className="text-3xl font-black uppercase flex items-center gap-2">
+                        MODIFICA <span className="bg-black text-white px-2">{character.name}</span>
                     </h2>
-                    <button onClick={onClose} className="p-2 text-zinc-400 hover:text-white transition-colors">
+                    <button onClick={onClose} className="p-2 bg-white border-2 border-black hover:bg-black hover:text-white transition-colors shadow-neo hover:shadow-none">
                         <X className="w-6 h-6" />
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                <form onSubmit={handleSubmit} className="p-8 space-y-8">
 
                     {/* Basic Info */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <label className="flex items-center gap-2 text-sm font-bold text-zinc-400">
-                                <User className="w-4 h-4 text-neo-cyan" /> NOME
+                            <label className="flex items-center gap-2 text-sm font-black uppercase">
+                                <User className="w-4 h-4" /> NOME
                             </label>
                             <input
                                 type="text"
                                 name="name"
                                 value={formData.name}
                                 onChange={handleChange}
-                                className="w-full p-3 bg-black/50 border border-white/10 rounded-lg focus:border-neo-cyan focus:outline-none text-white font-bold"
+                                className="w-full p-4 border-2 border-black font-bold focus:shadow-neo focus:outline-none transition-all"
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="flex items-center gap-2 text-sm font-bold text-zinc-400">
-                                <Dna className="w-4 h-4 text-neo-green" /> RAZZA
+                            <label className="flex items-center gap-2 text-sm font-black uppercase">
+                                <Dna className="w-4 h-4" /> RAZZA
                             </label>
                             <input
                                 type="text"
                                 name="race"
                                 value={formData.race}
                                 onChange={handleChange}
-                                className="w-full p-3 bg-black/50 border border-white/10 rounded-lg focus:border-neo-green focus:outline-none text-white"
+                                className="w-full p-4 border-2 border-black font-bold focus:shadow-neo focus:outline-none transition-all"
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="flex items-center gap-2 text-sm font-bold text-zinc-400">
-                                <Swords className="w-4 h-4 text-neo-pink" /> CLASSE
+                            <label className="flex items-center gap-2 text-sm font-black uppercase">
+                                <Swords className="w-4 h-4" /> CLASSE
                             </label>
                             <input
                                 type="text"
                                 name="class"
                                 value={formData.class}
                                 onChange={handleChange}
-                                className="w-full p-3 bg-black/50 border border-white/10 rounded-lg focus:border-neo-pink focus:outline-none text-white"
+                                className="w-full p-4 border-2 border-black font-bold focus:shadow-neo focus:outline-none transition-all"
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="flex items-center gap-2 text-sm font-bold text-zinc-400">
-                                <GraduationCap className="w-4 h-4 text-neo-yellow" /> LIVELLO
+                            <label className="flex items-center gap-2 text-sm font-black uppercase">
+                                <GraduationCap className="w-4 h-4" /> LIVELLO
                             </label>
                             <input
                                 type="number"
                                 name="level"
                                 value={formData.level}
                                 onChange={handleChange}
-                                className="w-full p-3 bg-black/50 border border-white/10 rounded-lg focus:border-neo-yellow focus:outline-none text-white"
+                                className="w-full p-4 border-2 border-black font-bold focus:shadow-neo focus:outline-none transition-all"
                             />
                         </div>
                     </div>
 
                     {/* Vitals */}
-                    <div className="grid grid-cols-2 gap-4 p-4 bg-white/5 rounded-xl border border-white/10">
-                        <div className="space-y-2">
-                            <label className="flex items-center gap-2 text-sm font-bold text-zinc-400">
-                                <Heart className="w-4 h-4 text-red-500" /> HP ATTUALI
+                    <div className="grid grid-cols-2 gap-6 p-6 bg-gray-50 border-2 border-black border-dashed">
+                        <div className="space-y-2 text-center">
+                            <label className="flex items-center justify-center gap-2 text-sm font-black uppercase text-red-600">
+                                <Heart className="w-4 h-4" /> HP Attuali
                             </label>
                             <input
                                 type="number"
                                 name="hp"
                                 value={formData.hp}
                                 onChange={handleChange}
-                                className="w-full p-3 bg-black/50 border border-white/10 rounded-lg focus:border-red-500 focus:outline-none text-white text-center font-mono text-lg"
+                                className="w-full p-4 border-2 border-black text-center font-black text-2xl focus:shadow-neo focus:outline-none transition-all"
                             />
                         </div>
-                        <div className="space-y-2">
-                            <label className="flex items-center gap-2 text-sm font-bold text-zinc-400">
-                                <Shield className="w-4 h-4 text-blue-500" /> HP MAX
+                        <div className="space-y-2 text-center">
+                            <label className="flex items-center justify-center gap-2 text-sm font-black uppercase text-blue-600">
+                                <Shield className="w-4 h-4" /> HP Max
                             </label>
                             <input
                                 type="number"
                                 name="maxHp"
                                 value={formData.maxHp}
                                 onChange={handleChange}
-                                className="w-full p-3 bg-black/50 border border-white/10 rounded-lg focus:border-blue-500 focus:outline-none text-white text-center font-mono text-lg"
+                                className="w-full p-4 border-2 border-black text-center font-black text-2xl focus:shadow-neo focus:outline-none transition-all"
                             />
                         </div>
                     </div>
 
                     {/* Stats Grid */}
                     <div className="space-y-2">
-                        <label className="text-sm font-bold text-zinc-400">CARATTERISTICHE</label>
-                        <div className="grid grid-cols-3 gap-2">
-                            {Object.entries(formData.stats).map(([stat, value]) => (
-                                <div key={stat} className="bg-black/30 p-2 rounded-lg border border-white/5 text-center">
-                                    <div className="text-xs text-zinc-500 uppercase font-bold mb-1">{stat}</div>
+                        <label className="text-sm font-black uppercase bg-black text-white px-2 py-1 inline-block">CARATTERISTICHE</label>
+                        <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+                            {Object.entries(formData.stats || {}).map(([stat, value]) => (
+                                <div key={stat} className="border-2 border-black p-2 text-center hover:bg-neo-yellow transition-colors">
+                                    <div className="text-[10px] font-black uppercase mb-1">{stat}</div>
                                     <input
                                         type="number"
                                         value={value as number}
                                         onChange={(e) => handleStatChange(stat, e.target.value)}
-                                        className="w-full bg-transparent text-center text-white font-mono font-bold focus:outline-none"
+                                        className="w-full bg-transparent text-center font-black text-lg focus:outline-none"
                                     />
                                 </div>
                             ))}
@@ -174,26 +174,26 @@ const EditCharacterModal: React.FC<EditCharacterModalProps> = ({ character, isOp
                     </div>
 
                     {/* Background & Alignment */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <label className="flex items-center gap-2 text-sm font-bold text-zinc-400">
-                                <Scroll className="w-4 h-4 text-zinc-400" /> BACKGROUND
+                            <label className="flex items-center gap-2 text-sm font-black uppercase">
+                                <Scroll className="w-4 h-4" /> BACKGROUND
                             </label>
                             <input
                                 type="text"
                                 name="background"
                                 value={formData.background}
                                 onChange={handleChange}
-                                className="w-full p-3 bg-black/50 border border-white/10 rounded-lg focus:border-white focus:outline-none text-white"
+                                className="w-full p-4 border-2 border-black font-bold focus:shadow-neo focus:outline-none transition-all"
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm font-bold text-zinc-400">ALLINEAMENTO</label>
+                            <label className="text-sm font-black uppercase">ALLINEAMENTO</label>
                             <select
                                 name="alignment"
                                 value={formData.alignment}
                                 onChange={handleChange}
-                                className="w-full p-3 bg-black/50 border border-white/10 rounded-lg focus:border-white focus:outline-none text-white"
+                                className="w-full p-4 border-2 border-black font-bold focus:shadow-neo focus:outline-none transition-all bg-white cursor-pointer appearance-none"
                             >
                                 <option value="">Seleziona...</option>
                                 <option value="Lawful Good">Lawful Good</option>
@@ -210,18 +210,18 @@ const EditCharacterModal: React.FC<EditCharacterModalProps> = ({ character, isOp
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-4 pt-4 border-t border-white/10">
+                    <div className="flex gap-4 pt-6 border-t-4 border-black">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 px-6 py-3 font-bold text-zinc-400 bg-zinc-800 rounded-lg hover:bg-zinc-700 transition-colors"
+                            className="flex-1 px-6 py-4 font-black uppercase bg-white border-2 border-black hover:bg-gray-100 transition-colors"
                         >
                             ANNULLA
                         </button>
                         <button
                             type="submit"
                             disabled={loading}
-                            className="flex-1 flex items-center justify-center gap-2 px-6 py-3 font-bold text-black bg-neo-violet rounded-lg hover:bg-neo-violet-light transition-all shadow-neo hover:shadow-none hover:translate-y-1"
+                            className="flex-1 flex items-center justify-center gap-2 px-6 py-4 font-black uppercase text-white bg-black border-2 border-black hover:bg-neo-violet transition-all shadow-neo hover:shadow-none hover:translate-y-1"
                         >
                             {loading ? 'SALVATAGGIO...' : <><Save className="w-5 h-5" /> SALVA MODIFICHE</>}
                         </button>
