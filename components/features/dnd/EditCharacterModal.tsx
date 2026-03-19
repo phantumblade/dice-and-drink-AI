@@ -60,12 +60,12 @@ const EditCharacterModal: React.FC<EditCharacterModalProps> = ({ character, isOp
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white border-4 border-black shadow-neo-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-in zoom-in duration-200">
+        <div className="app-modal-shell animate-in fade-in duration-200">
+            <div className="app-modal-panel w-full max-w-2xl animate-in slide-in-from-bottom-6 md:zoom-in md:slide-in-from-bottom-0 duration-200">
 
                 {/* Header */}
-                <div className="sticky top-0 z-10 flex items-center justify-between p-6 bg-neo-lime border-b-4 border-black">
-                    <h2 className="text-3xl font-black uppercase flex items-center gap-2">
+                <div className="app-modal-header flex items-center justify-between p-4 md:p-6 bg-neo-lime border-b-4 border-black">
+                    <h2 className="text-2xl md:text-3xl font-black uppercase flex items-center gap-2">
                         MODIFICA <span className="bg-black text-white px-2">{character.name}</span>
                     </h2>
                     <button onClick={onClose} className="p-2 bg-white border-2 border-black hover:bg-black hover:text-white transition-colors shadow-neo hover:shadow-none">
@@ -73,7 +73,7 @@ const EditCharacterModal: React.FC<EditCharacterModalProps> = ({ character, isOp
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-8 space-y-8">
+                <form onSubmit={handleSubmit} className="app-modal-body p-5 md:p-8 space-y-8">
 
                     {/* Basic Info */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -128,7 +128,7 @@ const EditCharacterModal: React.FC<EditCharacterModalProps> = ({ character, isOp
                     </div>
 
                     {/* Vitals */}
-                    <div className="grid grid-cols-2 gap-6 p-6 bg-gray-50 border-2 border-black border-dashed">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-4 md:p-6 bg-gray-50 border-2 border-black border-dashed">
                         <div className="space-y-2 text-center">
                             <label className="flex items-center justify-center gap-2 text-sm font-black uppercase text-red-600">
                                 <Heart className="w-4 h-4" /> HP Attuali
@@ -210,7 +210,7 @@ const EditCharacterModal: React.FC<EditCharacterModalProps> = ({ character, isOp
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-4 pt-6 border-t-4 border-black">
+                    <div className="app-modal-footer flex flex-col-reverse sm:flex-row gap-4 pt-6 border-t-4 border-black">
                         <button
                             type="button"
                             onClick={onClose}

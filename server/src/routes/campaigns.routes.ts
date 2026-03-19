@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import prisma from '../prisma';
+import { authenticateToken, requireStaffOrAdmin } from '../middleware/auth.middleware';
 
 const router = Router();
 
@@ -33,6 +34,13 @@ router.get('/:id', async (req, res) => {
                 dm: { select: { id: true, name: true, avatar: true } },
                 proposer: { select: { id: true, name: true, avatar: true } },
                 participants: { include: { character: true, user: { select: { id: true, name: true, avatar: true } } } },
+                requests: {
+                    include: {
+                        user: { select: { id: true, name: true, avatar: true } },
+                        character: true
+                    },
+                    orderBy: { createdAt: 'desc' }
+                },
                 sessions: { orderBy: { date: 'desc' } },
                 notes: {
                     include: {
@@ -40,7 +48,8 @@ router.get('/:id', async (req, res) => {
                         character: { select: { id: true, name: true, avatar: true } }
                     },
                     orderBy: { createdAt: 'desc' }
-                }
+                },
+                _count: { select: { participants: true, requests: true } }
             }
         });
         if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
@@ -208,6 +217,32 @@ router.post('/:id/notes', async (req, res) => {
     }
 });
 
+router.get('/requests/pending', authenticateToken, requireStaffOrAdmin, async (_req, res) => {
+    try {
+        const requests = await prisma.campaignRequest.findMany({
+            where: { status: 'PENDING' },
+            include: {
+                campaign: {
+                    select: {
+                        id: true,
+                        title: true,
+                        status: true,
+                        isProposal: true
+                    }
+                },
+                user: { select: { id: true, name: true, avatar: true } },
+                character: true
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+
+        res.json(requests);
+    } catch (error) {
+        console.error('Failed to fetch pending campaign requests:', error);
+        res.status(500).json({ error: 'Failed to fetch pending campaign requests' });
+    }
+});
+
 // --- Existing logic for Requests Approval ---
 // Get pending requests (Admin only or DM) - usually protected by middleware
 router.get('/:id/requests', async (req, res) => {
@@ -253,6 +288,11 @@ router.post('/requests/:id/approve', async (req, res) => {
                 userId: request.userId,
                 characterId: request.characterId
             }
+        });
+
+        await prisma.campaign.update({
+            where: { id: request.campaignId },
+            data: { currentPlayers: { increment: 1 } }
         });
 
         res.json({ success: true });

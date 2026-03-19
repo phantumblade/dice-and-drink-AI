@@ -138,12 +138,12 @@ const MixologistSection: React.FC = () => {
 
     const seminarsContent = (
         <div className="h-full flex flex-col">
-            <div className="flex justify-between items-center border-b-4 border-black pb-4 mb-2 bg-[#9D4EDD] -mx-4 px-4 -mt-4 md:-mx-8 md:px-8 md:-mt-8 pt-4">
-                <div className="flex items-center gap-3 text-white">
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center border-b-4 border-black pb-4 mb-2 bg-[#9D4EDD] -mx-4 px-4 -mt-4 md:-mx-8 md:px-8 md:-mt-8 pt-4">
+                <div className="flex items-center gap-3 text-white min-w-0">
                     <Scroll className="w-8 h-8" />
-                    <h3 className="text-2xl font-black uppercase tracking-tighter whitespace-nowrap">Seminari Tematici</h3>
+                    <h3 className="text-2xl font-black uppercase tracking-tighter">Seminari Tematici</h3>
                 </div>
-                <button onClick={(e) => { e.stopPropagation(); setActiveCategory(null); }} className="text-xs font-black uppercase hover:bg-black hover:text-white px-3 py-2 border-2 border-black transition-all bg-white text-black shadow-neo-sm hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none">
+                <button onClick={(e) => { e.stopPropagation(); setActiveCategory(null); }} className="self-start sm:self-auto text-xs font-black uppercase hover:bg-black hover:text-white px-3 py-2 border-2 border-black transition-all bg-white text-black shadow-neo-sm hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none">
                     Chiudi X
                 </button>
             </div>

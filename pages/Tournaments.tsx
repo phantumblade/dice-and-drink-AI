@@ -262,7 +262,7 @@ const Tournaments: React.FC = () => {
                             </div>
 
                             {/* Game Filter Dropdown */}
-                            <div className="relative group min-w-[200px]">
+                            <div className="relative group w-full sm:min-w-[200px]">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <Filter className="h-5 w-5 text-black" />
                                 </div>

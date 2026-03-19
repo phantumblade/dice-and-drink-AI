@@ -1,14 +1,13 @@
 import { Router } from 'express';
 import prisma from '../prisma';
-import { authenticateToken, requireAdmin } from '../middleware/auth.middleware';
+import { authenticateToken, requireAdmin, requireStaffOrAdmin } from '../middleware/auth.middleware';
 
 const router = Router();
 
-// Apply admin check to all routes
-router.use(authenticateToken, requireAdmin);
+router.use(authenticateToken);
 
 // Get Dashboard Stats
-router.get('/stats', async (req, res) => {
+router.get('/stats', requireStaffOrAdmin, async (req, res) => {
     try {
         const totalUsers = await prisma.user.count();
         const activeTournaments = await prisma.tournament.count({
@@ -33,7 +32,7 @@ router.get('/stats', async (req, res) => {
 });
 
 // Get Charts Data
-router.get('/charts', async (req, res) => {
+router.get('/charts', requireStaffOrAdmin, async (req, res) => {
     try {
         // Tournaments per year
         const tournaments = await prisma.tournament.findMany({
@@ -84,7 +83,7 @@ router.get('/charts', async (req, res) => {
 });
 
 // Get All Users
-router.get('/users', async (req, res) => {
+router.get('/users', requireStaffOrAdmin, async (req, res) => {
     try {
         const users = await prisma.user.findMany({
             select: {
@@ -105,7 +104,7 @@ router.get('/users', async (req, res) => {
 });
 
 // Delete User
-router.delete('/users/:id', async (req, res) => {
+router.delete('/users/:id', requireAdmin, async (req, res) => {
     try {
         await prisma.user.delete({
             where: { id: req.params.id }

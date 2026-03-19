@@ -72,16 +72,16 @@ const CharacterCreationModal: React.FC<CharacterCreationModalProps> = ({ onClose
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white border-4 border-black shadow-neo-lg max-w-2xl w-full relative max-h-[90vh] overflow-y-auto">
-                <div className="bg-neo-pink p-4 border-b-2 border-black flex justify-between items-center sticky top-0 z-10">
+        <div className="app-modal-shell animate-in fade-in duration-200">
+            <div className="app-modal-panel relative max-w-2xl animate-in slide-in-from-bottom-6 md:zoom-in md:slide-in-from-bottom-0 duration-200">
+                <div className="app-modal-header bg-neo-pink p-4 md:p-5 border-b-2 border-black flex justify-between items-center">
                     <h2 className="text-xl font-black uppercase text-white flex items-center gap-2">
                         <Dices className="w-6 h-6" /> Crea Nuovo Personaggio
                     </h2>
                     <button onClick={onClose} className="hover:bg-black hover:text-white p-1 rounded transition-colors border-2 border-transparent hover:border-white"><X className="w-6 h-6" /></button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                <form onSubmit={handleSubmit} className="app-modal-body p-5 md:p-6 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label className="block font-bold uppercase mb-2 text-xs">Nome Personaggio</label>
@@ -157,7 +157,7 @@ const CharacterCreationModal: React.FC<CharacterCreationModalProps> = ({ onClose
                                 <Dices className="w-4 h-4" /> Tira Dadi
                             </button>
                         </div>
-                        <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
                             {Object.entries(formData.stats).map(([stat, val]) => (
                                 <div key={stat} className="text-center">
                                     <label className="block text-[10px] font-black uppercase mb-1 text-gray-500">{stat}</label>
@@ -175,13 +175,15 @@ const CharacterCreationModal: React.FC<CharacterCreationModalProps> = ({ onClose
                         </div>
                     </div>
 
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full bg-neo-lime text-black py-4 font-black uppercase border-2 border-black hover:bg-neo-green transition-all shadow-neo hover:shadow-none hover:translate-y-1 text-xl flex items-center justify-center gap-2"
-                    >
-                        {loading ? 'Creazione...' : <><Save className="w-6 h-6" /> Salva Personaggio</>}
-                    </button>
+                    <div className="app-modal-footer pt-2">
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full bg-neo-lime text-black py-4 font-black uppercase border-2 border-black hover:bg-neo-green transition-all shadow-neo hover:shadow-none hover:translate-y-1 text-xl flex items-center justify-center gap-2"
+                        >
+                            {loading ? 'Creazione...' : <><Save className="w-6 h-6" /> Salva Personaggio</>}
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>

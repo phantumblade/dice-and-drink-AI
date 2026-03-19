@@ -124,9 +124,9 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, onClos
                 </div>
 
                 {/* Info Side */}
-                <div className="md:w-1/2 p-10 flex flex-col">
-                    <h2 className="text-5xl font-black uppercase mb-2 leading-none">{currentProduct.name}</h2>
-                    <div className="flex items-center gap-4 mb-6">
+                <div className="md:w-1/2 p-5 md:p-10 flex flex-col">
+                    <h2 className="text-4xl md:text-5xl font-black uppercase mb-2 leading-none">{currentProduct.name}</h2>
+                    <div className="flex flex-wrap items-center gap-3 md:gap-4 mb-6">
                         <span className="text-3xl font-black text-neo-violet">
                             {currentProduct.price === 0 ? 'Free to Play' : `€${currentProduct.price.toFixed(2)}`}
                         </span>
@@ -139,7 +139,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, onClos
                         {currentProduct.description}
                     </p>
 
-                    <div className="grid grid-cols-2 gap-4 mb-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
                         {currentProduct.category === ProductCategory.GAME && (
                             <>
                                 <div className="border-2 border-black p-3 bg-neo-bg shadow-neo-sm">

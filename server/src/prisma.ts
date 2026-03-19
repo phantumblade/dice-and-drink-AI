@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
-import dotenv from 'dotenv';
+import { loadServerEnv } from './loadEnv';
 
-dotenv.config();
+loadServerEnv();
 
 console.log('🔌 Connecting to PostgreSQL database...');
 

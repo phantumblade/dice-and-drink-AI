@@ -32,3 +32,10 @@ export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction
     }
     next();
 };
+
+export const requireStaffOrAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (req.user?.role !== 'admin' && req.user?.role !== 'staff') {
+        return res.status(403).json({ message: 'Staff or admin access required' });
+    }
+    next();
+};

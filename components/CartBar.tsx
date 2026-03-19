@@ -11,10 +11,10 @@ const CartBar: React.FC = () => {
   if (items.length === 0) return null;
 
   return (
-    <div className={`fixed bottom-0 left-0 right-0 bg-white border-t-2 border-black shadow-[0_-4px_0_0_rgba(0,0,0,1)] z-50 transition-all duration-300 ${isExpanded ? 'h-96' : 'h-20'}`}>
+    <div className={`fixed bottom-0 left-0 right-0 bg-white border-t-2 border-black shadow-[0_-4px_0_0_rgba(0,0,0,1)] z-50 transition-all duration-300 ${isExpanded ? 'h-[26rem] sm:h-96' : 'h-20 sm:h-20'}`}>
       {/* Toggle Handle */}
       <div 
-        className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white px-6 py-1 font-bold uppercase cursor-pointer flex items-center gap-2"
+        className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white px-4 sm:px-6 py-1 font-bold uppercase cursor-pointer flex items-center gap-2 whitespace-nowrap text-xs sm:text-sm"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
@@ -23,12 +23,12 @@ const CartBar: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 h-full flex flex-col">
         {/* Bar Header (Always Visible) */}
-        <div className="h-20 flex items-center justify-between border-b-2 border-black">
-          <div className="flex items-center gap-4">
+        <div className="min-h-[5rem] py-3 flex items-center justify-between gap-3 border-b-2 border-black">
+          <div className="flex items-center gap-3 min-w-0">
              <div className="bg-neo-lime p-2 border-2 border-black animate-bounce">
                 <ShoppingCart className="w-6 h-6" />
              </div>
-             <div>
+             <div className="min-w-0">
                  <p className="font-bold uppercase text-xs text-gray-500">Valore Totale</p>
                  <p className="text-2xl font-black">${total.toFixed(2)}</p>
              </div>
@@ -44,22 +44,24 @@ const CartBar: React.FC = () => {
              )}
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex gap-2 shrink-0">
             {isExpanded && (
                 <button 
                     onClick={() => {
                         if(confirm('Vuoi davvero svuotare il carrello?')) clearCart();
                     }}
-                    className="bg-red-500 text-white border-2 border-black px-4 py-3 font-bold uppercase hover:bg-red-600 transition-colors flex items-center gap-2"
+                    className="bg-red-500 text-white border-2 border-black px-3 sm:px-4 py-3 font-bold uppercase hover:bg-red-600 transition-colors flex items-center gap-2"
                 >
                     <Trash2 className="w-4 h-4" /> <span className="hidden sm:inline">Svuota</span>
                 </button>
             )}
             <button 
                 onClick={() => navigate('/booking')}
-                className="bg-neo-violet text-white border-2 border-black px-6 py-3 font-bold uppercase shadow-neo hover:bg-black transition-colors flex items-center gap-2"
+                className="bg-neo-violet text-white border-2 border-black px-3 sm:px-6 py-3 font-bold uppercase shadow-neo hover:bg-black transition-colors flex items-center gap-2"
             >
-                Prenota Ora <ArrowRight className="w-4 h-4" />
+                <span className="hidden sm:inline">Prenota Ora</span>
+                <span className="sm:hidden">Prenota</span>
+                <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>

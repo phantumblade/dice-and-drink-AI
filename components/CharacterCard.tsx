@@ -1,5 +1,6 @@
 import React from 'react';
 import { User, Shield, Heart, Scroll } from 'lucide-react';
+import { getAvatarUrl } from '../utils/url';
 
 interface CharacterCardProps {
     character: any;
@@ -7,7 +8,7 @@ interface CharacterCardProps {
 }
 
 const CharacterCard: React.FC<CharacterCardProps> = ({ character, onClick }) => {
-    const stats = JSON.parse(character.stats || '{}');
+    const stats = typeof character.stats === 'string' ? JSON.parse(character.stats || '{}') : (character.stats || {});
 
     const getClassColor = (className: string) => {
         const c = className.toLowerCase();
@@ -30,7 +31,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({ character, onClick }) => 
 
             <div className="flex items-center gap-4 mb-3 relative z-10">
                 <div className={`w-12 h-12 border-2 ${borderColor} rounded-full overflow-hidden bg-gray-100`}>
-                    <img src={character.avatar} alt={character.name} className="w-full h-full object-cover" />
+                    <img src={getAvatarUrl(character.avatar) || '/default-avatar.svg'} alt={character.name} className="w-full h-full object-cover" />
                 </div>
                 <div>
                     <h4 className="font-black uppercase text-lg leading-none group-hover:text-purple-600 transition-colors">{character.name}</h4>

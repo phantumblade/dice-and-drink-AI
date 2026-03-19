@@ -95,7 +95,7 @@ const Booking: React.FC = () => {
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className="block font-bold uppercase text-sm mb-2">Ora <span className="text-red-500">*</span></label>
                                 <input
@@ -176,10 +176,13 @@ const Booking: React.FC = () => {
 
             {/* Summary Modal */}
             {showSummary && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    <div className="bg-white border-4 border-black max-w-md w-full p-8 shadow-neo-lg relative">
-                        <h2 className="text-3xl font-black uppercase mb-6 text-center">Riepilogo</h2>
+                <div className="app-modal-shell">
+                    <div className="app-modal-panel max-w-md relative">
+                        <div className="app-modal-header border-b-2 border-black bg-white px-5 py-4 md:px-8 md:py-5">
+                            <h2 className="text-2xl md:text-3xl font-black uppercase text-center">Riepilogo</h2>
+                        </div>
 
+                        <div className="app-modal-body px-5 py-5 md:px-8 md:py-6">
                         <div className="space-y-4 mb-8 bg-neo-bg p-4 border-2 border-black">
                             <div className="flex justify-between border-b-2 border-gray-200 pb-2">
                                 <span className="font-bold text-gray-600 uppercase">Data</span>
@@ -199,7 +202,7 @@ const Booking: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="flex gap-4">
+                        <div className="app-modal-footer flex flex-col-reverse sm:flex-row gap-4">
                             <button
                                 onClick={() => setShowSummary(false)}
                                 className="flex-1 bg-white border-2 border-black py-3 font-bold uppercase hover:bg-gray-100"
@@ -212,6 +215,7 @@ const Booking: React.FC = () => {
                             >
                                 Conferma
                             </button>
+                        </div>
                         </div>
                     </div>
                 </div>

@@ -1,7 +1,6 @@
 import express from 'express';
 import path from 'path';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes';
 import productsRouter from './routes/products.routes';
 import tournamentsRouter from './routes/tournaments.routes';
@@ -11,11 +10,11 @@ import campaignsRouter from './routes/campaigns.routes';
 import usersRouter from './routes/users.routes';
 import charactersRouter from './routes/characters.routes';
 import notificationsRouter from './routes/notifications.routes';
+import { loadServerEnv } from './loadEnv';
 
-dotenv.config();
+loadServerEnv();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
 
 // CORS Configuration
 app.use(cors({
@@ -41,11 +40,6 @@ app.use('/api/notifications', notificationsRouter);
 
 app.get('/', (req, res) => {
     res.send('Dice & Drink API is running');
-});
-
-app.listen(Number(PORT), '0.0.0.0', () => {
-    console.log(`\n🎲 Dice & Drink Server Running!`);
-    console.log(`📡 Local:    http://localhost:${PORT}`);
 });
 
 export default app;

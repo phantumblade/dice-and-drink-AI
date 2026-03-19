@@ -33,9 +33,9 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({ onClose, onCrea
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white border-4 border-black w-full max-w-lg p-6 shadow-neo-lg">
-                <div className="flex justify-between items-center mb-6 border-b-2 border-black pb-4">
+        <div className="app-modal-shell animate-in fade-in duration-200">
+            <div className="app-modal-panel max-w-lg">
+                <div className="app-modal-header flex justify-between items-center p-5 md:p-6 border-b-2 border-black">
                     <h2 className="text-2xl font-black uppercase flex items-center gap-2">
                         <ShoppingBag className="w-6 h-6" /> Nuovo Prodotto
                     </h2>
@@ -44,7 +44,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({ onClose, onCrea
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="app-modal-body p-5 md:p-6 space-y-4">
                     <div>
                         <label className="block text-xs font-bold uppercase mb-1">Nome Prodotto</label>
                         <input
@@ -56,7 +56,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({ onClose, onCrea
                         />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-bold uppercase mb-1">Categoria</label>
                             <select
@@ -123,7 +123,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({ onClose, onCrea
                         <label htmlFor="available" className="font-bold uppercase cursor-pointer select-none">Disponibile subito</label>
                     </div>
 
-                    <div className="pt-4 flex justify-end gap-3">
+                    <div className="app-modal-footer pt-4 flex flex-col-reverse sm:flex-row justify-end gap-3">
                         <button
                             type="button"
                             onClick={onClose}

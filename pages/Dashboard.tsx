@@ -10,18 +10,21 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { useToast } from '../contexts/ToastContext';
+import { useUser } from '../contexts/UserContext';
 import CreateTournamentModal from '../components/CreateTournamentModal';
 import CreateProductModal from '../components/CreateProductModal';
 import GenerateCampaignModal from '../components/GenerateCampaignModal';
 import EditProductModal from '../components/EditProductModal';
 import EditTournamentModal from '../components/EditTournamentModal';
 import EditCampaignModal from '../components/EditCampaignModal';
+import { getAvatarUrl } from '../utils/url';
 
 const COLORS = ['#8b5cf6', '#ec4899', '#84cc16', '#06b6d4', '#f59e0b'];
 
 const Dashboard: React.FC = () => {
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const { user } = useUser();
   const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -41,6 +44,7 @@ const Dashboard: React.FC = () => {
   const [requests, setRequests] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [dataWarnings, setDataWarnings] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Modal States
@@ -76,33 +80,72 @@ const Dashboard: React.FC = () => {
 
   const handleCloseNotifications = async () => {
     setShowNotificationModal(false);
-    // Mark all as read
-    for (const notif of notifications) {
-      await api.post(`/notifications/${notif.id}/read`);
-    }
+    await Promise.allSettled(
+      notifications.map(notif => api.post(`/notifications/${notif.id}/read`))
+    );
     setNotifications([]);
   };
 
   const fetchData = async () => {
     try {
-      const [statsRes, chartsRes, usersRes, productsRes, tournamentsRes, allTournamentsRes, campaignsRes, requestsRes] = await Promise.all([
+      const results = await Promise.allSettled([
         api.get('/admin/stats'),
         api.get('/admin/charts'),
         api.get('/admin/users'),
         api.get('/products'),
         api.get('/tournaments'),
-        api.get('/tournaments'), // Duplicate call? Let's keep it to match existing code structure for now, or remove if redundant.
         api.get('/campaigns'),
         api.get('/campaigns/requests/pending')
       ]);
-      setStats(statsRes.data);
-      setChartsData(chartsRes.data);
-      setUsers(usersRes.data);
-      setProducts(productsRes.data);
-      setTournaments(tournamentsRes.data);
-      setCampaigns(campaignsRes.data);
-      setRequests(requestsRes.data);
 
+      const warnings: string[] = [];
+
+      if (results[0].status === 'fulfilled') {
+        setStats(results[0].value.data);
+      } else {
+        warnings.push('Statistiche generali non disponibili.');
+      }
+
+      if (results[1].status === 'fulfilled') {
+        setChartsData(results[1].value.data);
+      } else {
+        warnings.push('Grafici non disponibili.');
+      }
+
+      if (results[2].status === 'fulfilled') {
+        setUsers(results[2].value.data);
+      } else {
+        warnings.push('Elenco utenti non disponibile.');
+      }
+
+      if (results[3].status === 'fulfilled') {
+        setProducts(results[3].value.data);
+      } else {
+        warnings.push('Catalogo prodotti non disponibile.');
+      }
+
+      if (results[4].status === 'fulfilled') {
+        setTournaments(results[4].value.data);
+      } else {
+        warnings.push('Elenco tornei non disponibile.');
+      }
+
+      if (results[5].status === 'fulfilled') {
+        setCampaigns(results[5].value.data);
+      } else {
+        warnings.push('Elenco campagne non disponibile.');
+      }
+
+      if (results[6].status === 'fulfilled') {
+        setRequests(results[6].value.data);
+      } else {
+        warnings.push('Richieste campagne non disponibili.');
+      }
+
+      setDataWarnings(warnings);
+      if (warnings.length > 0) {
+        showToast('Dashboard caricata parzialmente. Alcuni moduli non sono disponibili.', 'info');
+      }
     } catch (error) {
       console.error('Failed to fetch dashboard data', error);
       showToast('Errore nel caricamento della dashboard', 'error');
@@ -110,6 +153,15 @@ const Dashboard: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const overviewStats = {
+    totalUsers: stats.totalUsers || users.length,
+    activeTournaments: stats.activeTournaments || tournaments.filter(t => t.status === 'ongoing').length,
+    finishedTournaments: stats.finishedTournaments || tournaments.filter(t => t.status === 'completed').length,
+    upcomingTournaments: stats.upcomingTournaments || tournaments.filter(t => t.status === 'upcoming').length
+  };
+
+  const canDeleteUsers = user?.role === 'admin';
 
   const handleDeleteUser = async (userId: string) => {
     if (!confirm('Sei sicuro di voler eliminare questo utente? Questa azione è irreversibile.')) return;
@@ -198,6 +250,19 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
+      {dataWarnings.length > 0 && (
+        <div className="mb-8 border-2 border-black bg-neo-yellow/40 p-4 shadow-neo-sm">
+          <p className="font-black uppercase mb-2">Caricamento Parziale</p>
+          <div className="flex flex-wrap gap-2">
+            {dataWarnings.map(warning => (
+              <span key={warning} className="border border-black bg-white px-2 py-1 text-xs font-bold uppercase">
+                {warning}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex flex-wrap gap-4 mb-8 border-b-2 border-black pb-4">
         <TabButton id="overview" label="Panoramica" icon={TrendingUp} />
@@ -211,10 +276,10 @@ const Dashboard: React.FC = () => {
       {activeTab === 'overview' && (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-            <StatCard title="Utenti Totali" value={stats.totalUsers} icon={Users} colorClass="bg-neo-cyan" />
-            <StatCard title="Tornei Attivi" value={stats.activeTournaments} icon={Swords} colorClass="bg-neo-pink text-white" />
-            <StatCard title="Tornei Conclusi" value={stats.finishedTournaments} icon={Trophy} colorClass="bg-neo-yellow" />
-            <StatCard title="In Arrivo" value={stats.upcomingTournaments} icon={Calendar} colorClass="bg-neo-violet text-white" />
+            <StatCard title="Utenti Totali" value={overviewStats.totalUsers} icon={Users} colorClass="bg-neo-cyan" />
+            <StatCard title="Tornei Attivi" value={overviewStats.activeTournaments} icon={Swords} colorClass="bg-neo-pink text-white" />
+            <StatCard title="Tornei Conclusi" value={overviewStats.finishedTournaments} icon={Trophy} colorClass="bg-neo-yellow" />
+            <StatCard title="In Arrivo" value={overviewStats.upcomingTournaments} icon={Calendar} colorClass="bg-neo-violet text-white" />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
@@ -274,7 +339,7 @@ const Dashboard: React.FC = () => {
               <span className="bg-black text-white px-3 py-1 font-bold text-xs rounded-full">{users.length} Utenti</span>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
+              <table className="w-full min-w-[720px] text-left">
                 <thead className="bg-gray-100 border-b-2 border-black">
                   <tr>
                     <th className="p-4 font-black uppercase text-xs tracking-wider">Utente</th>
@@ -314,7 +379,7 @@ const Dashboard: React.FC = () => {
                         </div>
                       </td>
                       <td className="p-4 text-right">
-                        {user.role !== 'admin' && (
+                        {canDeleteUsers && user.role !== 'admin' && (
                           <button
                             onClick={() => handleDeleteUser(user.id)}
                             className="text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"
@@ -358,7 +423,8 @@ const Dashboard: React.FC = () => {
           </div>
 
           <div className="bg-white border-2 border-black shadow-neo overflow-hidden">
-            <table className="w-full text-left">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-left">
               <thead className="bg-gray-100 border-b-2 border-black">
                 <tr>
                   <th className="p-4 font-black uppercase text-xs tracking-wider">Prodotto</th>
@@ -384,6 +450,7 @@ const Dashboard: React.FC = () => {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}
@@ -413,7 +480,8 @@ const Dashboard: React.FC = () => {
           </div>
 
           <div className="bg-white border-2 border-black shadow-neo overflow-hidden">
-            <table className="w-full text-left">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[880px] text-left">
               <thead className="bg-gray-100 border-b-2 border-black">
                 <tr>
                   <th className="p-4 font-black uppercase text-xs tracking-wider">Torneo</th>
@@ -456,6 +524,7 @@ const Dashboard: React.FC = () => {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}
@@ -485,7 +554,8 @@ const Dashboard: React.FC = () => {
           </div>
 
           <div className="bg-white border-2 border-black shadow-neo overflow-hidden">
-            <table className="w-full text-left">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left">
               <thead className="bg-gray-100 border-b-2 border-black">
                 <tr>
                   <th className="p-4 font-black uppercase text-xs tracking-wider">Campagna</th>
@@ -542,6 +612,7 @@ const Dashboard: React.FC = () => {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}
@@ -598,7 +669,8 @@ const Dashboard: React.FC = () => {
                 <Bell className="w-5 h-5" /> Richieste in Attesa
               </h3>
             </div>
-            <table className="w-full text-left">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-left">
               <thead className="bg-gray-100 border-b-2 border-black">
                 <tr>
                   <th className="p-4 font-black uppercase text-xs tracking-wider">Utente</th>
@@ -614,7 +686,7 @@ const Dashboard: React.FC = () => {
                   requests.map(req => (
                     <tr key={req.id} className="hover:bg-neo-bg/30 transition-colors">
                       <td className="p-4 flex items-center gap-3">
-                        <img src={req.user.avatar} alt={req.user.name} className="w-8 h-8 rounded-full border border-black" />
+                        <img src={getAvatarUrl(req.user.avatar) || '/default-avatar.svg'} alt={req.user.name} className="w-8 h-8 rounded-full border border-black object-cover bg-white" />
                         <span className="font-bold">{req.user.name}</span>
                       </td>
                       <td className="p-4">
@@ -625,9 +697,13 @@ const Dashboard: React.FC = () => {
                       <td className="p-4 text-right flex justify-end gap-2">
                         <button
                           onClick={async () => {
-                            await api.post(`/campaigns/requests/${req.id}/approve`);
-                            fetchData();
-                            showToast('Richiesta approvata', 'success');
+                            try {
+                              await api.post(`/campaigns/requests/${req.id}/approve`);
+                              await fetchData();
+                              showToast('Richiesta approvata', 'success');
+                            } catch (error) {
+                              showToast('Errore durante l’approvazione della richiesta', 'error');
+                            }
                           }}
                           className="bg-green-500 text-white p-2 border-2 border-black shadow-neo-sm hover:-translate-y-1 transition-transform"
                           title="Approva"
@@ -636,9 +712,13 @@ const Dashboard: React.FC = () => {
                         </button>
                         <button
                           onClick={async () => {
-                            await api.post(`/campaigns/requests/${req.id}/reject`);
-                            fetchData();
-                            showToast('Richiesta rifiutata', 'error');
+                            try {
+                              await api.post(`/campaigns/requests/${req.id}/reject`);
+                              await fetchData();
+                              showToast('Richiesta rifiutata', 'error');
+                            } catch (error) {
+                              showToast('Errore durante il rifiuto della richiesta', 'error');
+                            }
                           }}
                           className="bg-red-500 text-white p-2 border-2 border-black shadow-neo-sm hover:-translate-y-1 transition-transform"
                           title="Rifiuta"
@@ -651,17 +731,19 @@ const Dashboard: React.FC = () => {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}
 
       {/* Notification Modal */}
       {showNotificationModal && notifications.length > 0 && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white border-4 border-black shadow-neo max-w-md w-full p-6 animate-in zoom-in-95 duration-300 relative">
+        <div className="app-modal-shell z-[60] animate-in fade-in duration-300">
+          <div className="app-modal-panel max-w-md animate-in slide-in-from-bottom-6 md:zoom-in md:slide-in-from-bottom-0 duration-300 relative">
             <button onClick={handleCloseNotifications} className="absolute top-2 right-2 text-gray-500 hover:text-black">
               <X className="w-6 h-6" />
             </button>
+            <div className="app-modal-body p-5 md:p-6">
             <h3 className="text-2xl font-black uppercase italic mb-4 flex items-center gap-2">
               <Bell className="w-6 h-6" /> Notifiche
             </h3>
@@ -676,6 +758,7 @@ const Dashboard: React.FC = () => {
             <button onClick={handleCloseNotifications} className="w-full mt-6 bg-black text-white font-black uppercase py-3 hover:bg-gray-800 transition-colors">
               Ho Capito
             </button>
+            </div>
           </div>
         </div>
       )}

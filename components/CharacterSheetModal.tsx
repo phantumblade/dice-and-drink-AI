@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { X, Shield, Heart, Zap, Backpack, Skull, Scroll, Edit2, Save, Circle, Square } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
+import api from '../services/api';
+import { useToast } from '../contexts/ToastContext';
+import { getAvatarUrl } from '../utils/url';
 
 interface CharacterSheetModalProps {
     character: any;
@@ -9,8 +12,10 @@ interface CharacterSheetModalProps {
 
 const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({ character, onClose }) => {
     const { user } = useUser();
+    const { showToast } = useToast();
     const [isEditing, setIsEditing] = useState(false);
     const [editedCharacter, setEditedCharacter] = useState(character);
+    const [isSaving, setIsSaving] = useState(false);
 
     if (!character) return null;
 
@@ -31,21 +36,31 @@ const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({ character, on
     const resources = getResources();
     const isOwner = user?.id === character.userId;
 
-    const handleSave = () => {
-        // Here you would call an API to update the character
-        console.log('Saving character:', editedCharacter);
-        setIsEditing(false);
+    const handleSave = async () => {
+        setIsSaving(true);
+
+        try {
+            const response = await api.put(`/characters/${editedCharacter.id}`, editedCharacter);
+            setEditedCharacter(response.data);
+            showToast('Scheda personaggio aggiornata', 'success');
+            setIsEditing(false);
+        } catch (error) {
+            console.error('Failed to save character:', error);
+            showToast('Impossibile salvare la scheda personaggio', 'error');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white w-full max-w-4xl max-h-[90vh] overflow-y-auto border-4 border-black shadow-neo relative animate-in zoom-in-95 duration-200">
+        <div className="app-modal-shell animate-in fade-in duration-200">
+            <div className="app-modal-panel relative max-w-4xl animate-in slide-in-from-bottom-6 md:zoom-in md:slide-in-from-bottom-0 duration-200">
 
                 {/* Header */}
-                <div className="bg-black text-white p-6 sticky top-0 z-10 flex justify-between items-start">
-                    <div className="flex items-center gap-6">
-                        <div className="w-24 h-24 border-4 border-white rounded-full overflow-hidden bg-gray-800 shadow-lg relative group">
-                            <img src={editedCharacter.avatar} alt={editedCharacter.name} className="w-full h-full object-cover" />
+                <div className="app-modal-header bg-black text-white p-4 md:p-6 flex flex-col gap-4 md:flex-row md:justify-between md:items-start">
+                    <div className="flex items-start gap-4 md:gap-6">
+                        <div className="w-20 h-20 md:w-24 md:h-24 border-4 border-white rounded-full overflow-hidden bg-gray-800 shadow-lg relative group shrink-0">
+                            <img src={getAvatarUrl(editedCharacter.avatar) || '/default-avatar.svg'} alt={editedCharacter.name} className="w-full h-full object-cover" />
                             {isEditing && (
                                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer">
                                     <Edit2 className="w-6 h-6 text-white" />
@@ -58,10 +73,10 @@ const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({ character, on
                                     type="text"
                                     value={editedCharacter.name}
                                     onChange={(e) => setEditedCharacter({ ...editedCharacter, name: e.target.value })}
-                                    className="text-4xl font-black uppercase italic leading-none mb-1 bg-gray-800 text-white border-b border-white focus:outline-none w-full"
+                                    className="text-3xl md:text-4xl font-black uppercase italic leading-none mb-1 bg-gray-800 text-white border-b border-white focus:outline-none w-full"
                                 />
                             ) : (
-                                <h2 className="text-4xl font-black uppercase italic leading-none mb-1">{editedCharacter.name}</h2>
+                                <h2 className="text-3xl md:text-4xl font-black uppercase italic leading-none mb-1">{editedCharacter.name}</h2>
                             )}
 
                             <p className="text-lg font-bold text-gray-300 uppercase tracking-wider">
@@ -73,14 +88,14 @@ const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({ character, on
                             </div>
                         </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 self-end md:self-auto">
                         {isOwner && !isEditing && (
                             <button onClick={() => setIsEditing(true)} className="text-white hover:text-gray-300 transition-colors p-2">
                                 <Edit2 className="w-6 h-6" />
                             </button>
                         )}
                         {isEditing && (
-                            <button onClick={handleSave} className="text-green-400 hover:text-green-300 transition-colors p-2">
+                            <button onClick={handleSave} disabled={isSaving} className="text-green-400 hover:text-green-300 transition-colors p-2 disabled:opacity-50">
                                 <Save className="w-6 h-6" />
                             </button>
                         )}
@@ -90,7 +105,7 @@ const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({ character, on
                     </div>
                 </div>
 
-                <div className="p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="app-modal-body p-5 md:p-8 grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
 
                     {/* Left Col: Stats & Combat */}
                     <div className="space-y-6">
@@ -138,7 +153,7 @@ const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({ character, on
                             </div>
                         )}
 
-                        <div className="grid grid-cols-3 gap-4 text-center">
+                        <div className="grid grid-cols-3 gap-3 md:gap-4 text-center">
                             <div className="bg-red-50 border-2 border-black p-3">
                                 <Heart className="w-6 h-6 mx-auto text-red-500 mb-1" />
                                 <div className="text-2xl font-black">{character.hp}</div>
@@ -160,7 +175,7 @@ const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({ character, on
                             <h3 className="font-black uppercase text-xl mb-4 border-b-2 border-black pb-2 flex items-center gap-2">
                                 <Skull className="w-5 h-5" /> Caratteristiche
                             </h3>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 {Object.entries(stats).map(([key, value]: [string, any]) => (
                                     <div key={key} className="flex justify-between items-center bg-white p-2 border border-black">
                                         <span className="font-black uppercase text-sm">{key}</span>
@@ -211,7 +226,7 @@ const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({ character, on
                 </div>
 
                 {/* Campaign History Section */}
-                <div className="p-8 pt-0">
+                <div className="px-5 pb-5 md:px-8 md:pb-8 md:pt-0">
                     <div className="bg-white border-2 border-black p-6 shadow-sm">
                         <h3 className="font-black uppercase text-xl mb-4 border-b-2 border-black pb-2 flex items-center gap-2">
                             <Scroll className="w-5 h-5" /> Storico Campagne

@@ -150,11 +150,11 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
 
                             <div className="mb-2">
                                 <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-gray-900">{user.name}</h1>
-                                <div className="flex flex-wrap justify-center md:justify-start items-center gap-3 mt-2 font-bold">
+                                <div className="flex flex-wrap justify-center md:justify-start items-center gap-3 mt-2 font-bold min-w-0">
                                     <span className="flex items-center gap-1 px-3 py-1 bg-neo-cyan border-2 border-black text-xs uppercase shadow-neo-sm">
                                         <Shield className="w-3 h-3" /> {user.role}
                                     </span>
-                                    <span className="flex items-center gap-1 text-gray-600 text-sm bg-gray-100 px-3 py-1 border border-gray-300 rounded-full">
+                                    <span className="flex items-center gap-1 text-gray-600 text-sm bg-gray-100 px-3 py-1 border border-gray-300 rounded-full min-w-0 break-all">
                                         <Mail className="w-3 h-3" /> {user.email}
                                     </span>
                                 </div>
@@ -195,25 +195,27 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
             </div>
 
             {/* Tabs Navigation */}
-            <div className="flex justify-center mb-8 border-b-2 border-gray-200">
+            <div className="mb-8 border-b-2 border-gray-200 overflow-x-auto">
+                <div className="flex justify-start md:justify-center min-w-max">
                 <button
                     onClick={() => setActiveTab('overview')}
-                    className={`px-6 py-3 font-black uppercase flex items-center gap-2 border-b-4 transition-all ${activeTab === 'overview' ? 'border-black text-black' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+                    className={`px-4 md:px-6 py-3 font-black uppercase flex items-center gap-2 border-b-4 transition-all whitespace-nowrap ${activeTab === 'overview' ? 'border-black text-black' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
                 >
                     <Trophy className="w-5 h-5" /> Panoramica
                 </button>
                 <button
                     onClick={() => setActiveTab('characters')}
-                    className={`px-6 py-3 font-black uppercase flex items-center gap-2 border-b-4 transition-all ${activeTab === 'characters' ? 'border-amber-600 text-amber-800' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+                    className={`px-4 md:px-6 py-3 font-black uppercase flex items-center gap-2 border-b-4 transition-all whitespace-nowrap ${activeTab === 'characters' ? 'border-amber-600 text-amber-800' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
                 >
                     <Scroll className="w-5 h-5" /> Personaggi D&D
                 </button>
                 <button
                     onClick={() => setActiveTab('dm')}
-                    className={`px-6 py-3 font-black uppercase flex items-center gap-2 border-b-4 transition-all ${activeTab === 'dm' ? 'border-neo-violet text-neo-violet' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+                    className={`px-4 md:px-6 py-3 font-black uppercase flex items-center gap-2 border-b-4 transition-all whitespace-nowrap ${activeTab === 'dm' ? 'border-neo-violet text-neo-violet' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
                 >
                     <Crown className="w-5 h-5" /> DM Zone
                 </button>
+                </div>
             </div>
 
             {/* Tab Content */}
@@ -414,13 +416,13 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
 
             {/* Edit Modal */}
             {isEditing && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white border-4 border-black w-full max-w-md p-6 shadow-neo-lg transform transition-all scale-100">
-                        <div className="flex justify-between items-center mb-6 border-b-2 border-black pb-4">
+                <div className="app-modal-shell animate-in fade-in duration-200">
+                    <div className="app-modal-panel max-w-md transform transition-all scale-100">
+                        <div className="app-modal-header flex justify-between items-center p-5 md:p-6 border-b-2 border-black bg-white">
                             <h2 className="text-2xl font-black uppercase">Modifica Profilo</h2>
                             <button onClick={() => setIsEditing(false)} className="hover:bg-gray-100 p-1 rounded-full transition-colors"><X className="w-6 h-6" /></button>
                         </div>
-                        <form onSubmit={handleSave} className="space-y-5">
+                        <form onSubmit={handleSave} className="app-modal-body p-5 md:p-6 space-y-5">
                             <div>
                                 <label className="block text-xs font-bold uppercase mb-2 text-gray-600">Nome Utente</label>
                                 <input
@@ -440,7 +442,7 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
                                 />
                             </div>
 
-                            <div className="pt-2">
+                            <div className="app-modal-footer pt-2">
                                 <button type="submit" className="w-full bg-neo-lime border-2 border-black py-4 font-black uppercase shadow-neo hover:translate-y-1 hover:shadow-none transition-all text-lg tracking-wide rounded-sm">
                                     Salva Modifiche
                                 </button>

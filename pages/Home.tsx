@@ -23,12 +23,12 @@ const Home: React.FC = () => {
                             APERTO FINO ALLE 2 DI NOTTE
                         </div>
 
-                        <h1 className="text-7xl md:text-8xl font-black mb-2 leading-[0.85] tracking-tighter uppercase">
+                        <h1 className="text-5xl sm:text-6xl md:text-8xl font-black mb-2 leading-[0.85] tracking-tighter uppercase">
                             Roll <span className="text-neo-violet">Once</span>,<br />
                             Drink <span className="text-neo-pink">Twice</span>.
                         </h1>
 
-                        <p className="text-xl font-bold mb-8 max-w-lg mt-6 text-gray-800">
+                        <p className="text-lg sm:text-xl font-bold mb-8 max-w-lg mt-6 text-gray-800">
                             Il ritrovo definitivo per giochi da tavolo, campagne D&D e cocktail artigianali. Nessuna prenotazione richiesta per il caos.
                         </p>
 

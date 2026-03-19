@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:all": "concurrently \"cd server && npm run dev\" \"npx -y wait-on tcp:3001 && npm run dev\"",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npx -y wait-on http-get://127.0.0.1:3001/ && vite",
+    "dev:all": "concurrently -k -n server,client -c auto \"npm run dev:server\" \"npm run dev:client\"",
     "build": "vite build",
     "preview": "vite preview"
   },

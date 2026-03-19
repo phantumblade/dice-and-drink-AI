@@ -1,647 +1,756 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-    User as UserIcon, Book, X, Dice5, Save, Lock, Users,
-    Calendar, BookOpen, Compass, Shield, Heart, Loader2,
-    ChevronRight, Info, Wand2, ExternalLink, Skull, FileText,
-    AlertTriangle, CheckCircle, HelpCircle, UserPlus, Send,
-    MessageSquare, Plus, Crown, Sparkles, Scroll, PenTool,
-    Sword, Scale
+    BookOpen,
+    ChevronRight,
+    Crown,
+    Dice5,
+    ExternalLink,
+    FileText,
+    Flame,
+    Loader2,
+    Map,
+    PenTool,
+    Plus,
+    Scroll,
+    Shield,
+    Sparkles,
+    Sword,
+    UserPlus,
+    Users,
+    Wand2,
+    X
 } from 'lucide-react';
-import { useUser } from '../contexts/UserContext';
-import { useCampaigns } from '../contexts/CampaignContext';
-import { Campaign, Character, CampaignNote } from '@/types';
+import { Campaign, Character } from '@/types';
 import api from '../services/api';
+import { useCampaigns } from '../contexts/CampaignContext';
+import { useToast } from '../contexts/ToastContext';
+import { useUser } from '../contexts/UserContext';
 import EditCharacterModal from '../components/features/dnd/EditCharacterModal';
-import { askAiAssistant } from '../services/ai';
+import { getAvatarUrl } from '../utils/url';
+
+type ViewMode = 'my_campaigns' | 'all' | 'board';
+type CreateMode = 'dm' | 'proposal' | null;
+
+const statusStyles: Record<string, string> = {
+    RECRUITING: 'bg-neo-lime text-black',
+    ACTIVE: 'bg-neo-cyan text-black',
+    PAUSED: 'bg-neo-yellow text-black',
+    COMPLETED: 'bg-zinc-800 text-white'
+};
+
+const campaignTypeLabel: Record<Campaign['type'], string> = {
+    ONE_SHOT: 'One-Shot',
+    SHORT_CAMPAIGN: 'Campagna Breve',
+    LONG_CAMPAIGN: 'Campagna Lunga'
+};
+
+const viewMeta: Record<ViewMode, { title: string; description: string; accent: string; icon: React.ElementType }> = {
+    all: {
+        title: 'Avventure In Corso',
+        description: 'Campagne attive, tavoli in recruiting e schede avventura pronte da aprire.',
+        accent: 'bg-neo-cyan',
+        icon: Sword
+    },
+    my_campaigns: {
+        title: 'Le Tue Cronache',
+        description: 'Le avventure in cui sei DM o giocatore, con accesso rapido al tuo personaggio.',
+        accent: 'bg-neo-pink',
+        icon: Crown
+    },
+    board: {
+        title: 'Bacheca delle Quest',
+        description: 'La mission board della community: concept, call per DM e nuove spedizioni da far nascere.',
+        accent: 'bg-neo-yellow',
+        icon: FileText
+    }
+};
 
 const DnDTracker: React.FC = () => {
+    const navigate = useNavigate();
     const { user } = useUser();
     const { campaigns, loading, refreshCampaigns } = useCampaigns();
+    const { showToast } = useToast();
 
-    // View States
-    const [viewMode, setViewMode] = useState<'my_campaigns' | 'all' | 'board'>('all');
-    const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
-    const [activeTab, setActiveTab] = useState<'details' | 'party' | 'sessions' | 'chat'>('details');
-
-    // Modals & New Objects
+    const [viewMode, setViewMode] = useState<ViewMode>('all');
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [createMode, setCreateMode] = useState<'dm' | 'proposal' | null>(null);
+    const [createMode, setCreateMode] = useState<CreateMode>(null);
     const [editingChar, setEditingChar] = useState<Character | null>(null);
-
-    // Form Data (Proposal/Create)
+    const [submitting, setSubmitting] = useState(false);
     const [newCampaignData, setNewCampaignData] = useState({
-        title: '', description: '', system: 'D&D 5e',
-        minPlayers: 3, maxPlayers: 5, rules: '', plot: '',
-        frequency: 'Weekly', sessionDuration: '3-4 hours'
+        title: '',
+        description: '',
+        system: 'D&D 5e',
+        minPlayers: 3,
+        maxPlayers: 5,
+        rules: '',
+        plot: '',
+        frequency: 'Weekly',
+        sessionDuration: '3-4 hours'
     });
 
-    // Chat
-    const [chatMessage, setChatMessage] = useState('');
-
-    // --- Derived Data ---
-    const myCampaigns = campaigns.filter(c =>
-        c.participants.some(p => p.user.id === user?.id) || c.dm.id === user?.id
+    const myCampaigns = campaigns.filter(campaign =>
+        campaign.dm.id === user?.id || campaign.participants.some(participant => participant.user.id === user?.id)
     );
+    const proposals = campaigns.filter(campaign => campaign.isProposal);
+    const activeCampaigns = campaigns.filter(campaign => !campaign.isProposal);
+    const recruitingCampaigns = activeCampaigns.filter(campaign => campaign.status === 'RECRUITING');
+    const openSeats = activeCampaigns.reduce((sum, campaign) => {
+        const occupied = campaign.participants?.length ?? campaign._count?.participants ?? 0;
+        const remaining = Math.max((campaign.maxPlayers || 0) - occupied, 0);
+        return sum + remaining;
+    }, 0);
 
-    const proposals = campaigns.filter(c => c.isProposal);
-    const activeCampaigns = campaigns.filter(c => !c.isProposal);
-
-    const filteredCampaigns = viewMode === 'my_campaigns' ? myCampaigns
-        : viewMode === 'board' ? proposals
+    const filteredCampaigns = viewMode === 'my_campaigns'
+        ? myCampaigns
+        : viewMode === 'board'
+            ? proposals
             : activeCampaigns;
 
-    // --- Helpers ---
-    const isUserInCampaign = (campaign: Campaign) => {
-        return campaign.participants.some(p => p.user.id === user?.id);
+    const currentView = viewMeta[viewMode];
+
+    const getPlayerCharacter = (campaign: Campaign) =>
+        campaign.participants.find(participant => participant.user.id === user?.id)?.character;
+
+    const openCampaign = (campaignId: string) => {
+        navigate(`/campaigns/${campaignId}`);
     };
 
-    const getPlayerCharacter = (campaign: Campaign) => {
-        const p = campaign.participants.find(part => part.user.id === user?.id);
-        return p?.character;
+    const openCreationFlow = (mode?: CreateMode) => {
+        setCreateMode(mode ?? null);
+        setShowCreateModal(true);
     };
 
-    // --- Handlers ---
-    const handleCreateCampaign = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const resetCreationForm = () => {
+        setCreateMode(null);
+        setShowCreateModal(false);
+        setNewCampaignData({
+            title: '',
+            description: '',
+            system: 'D&D 5e',
+            minPlayers: 3,
+            maxPlayers: 5,
+            rules: '',
+            plot: '',
+            frequency: 'Weekly',
+            sessionDuration: '3-4 hours'
+        });
+    };
+
+    const handleCreateCampaign = async (event: React.FormEvent) => {
+        event.preventDefault();
+        if (!createMode || !user) {
+            showToast('Sessione non valida. Effettua di nuovo l’accesso.', 'error');
+            return;
+        }
+
+        setSubmitting(true);
         try {
-            await api.post('/campaigns', {
+            const response = await api.post<Campaign>('/campaigns', {
                 ...newCampaignData,
                 isProposal: createMode === 'proposal',
-                proposerId: user?.id,
-                dmId: createMode === 'dm' ? user?.id : undefined
+                proposerId: user.id,
+                dmId: createMode === 'dm' ? user.id : undefined
             });
-            refreshCampaigns();
-            setShowCreateModal(false);
-            setCreateMode(null);
-            alert(createMode === 'proposal' ? 'Proposta inviata!' : 'Campagna Creata!');
-        } catch (err) {
-            console.error(err);
-            alert('Errore creazione campagna');
+
+            await refreshCampaigns();
+            resetCreationForm();
+            showToast(
+                createMode === 'proposal' ? 'Annuncio pubblicato in bacheca.' : 'Campagna creata correttamente.',
+                'success'
+            );
+            openCampaign(response.data.id);
+        } catch (error) {
+            console.error('Failed to create campaign:', error);
+            showToast('Errore durante la creazione della campagna.', 'error');
+        } finally {
+            setSubmitting(false);
         }
     };
 
-    const handleJoinRequest = async (campaignId: string, char: Character) => {
-        const alreadyIn = selectedCampaign?.participants.some(p => p.user.id === user?.id);
-        if (alreadyIn) return alert("Hai già un personaggio in questa campagna!");
-
-        try {
-            await api.post(`/campaigns/${campaignId}/request`, {
-                userId: user?.id,
-                characterId: char.id,
-                message: "Vorrei unirmi!"
-            });
-            alert('Richiesta inviata!');
-            refreshCampaigns();
-        } catch (err: any) {
-            alert(err.response?.data?.error || 'Errore nella richiesta');
+    const handleEditCharacter = (campaign: Campaign) => {
+        const character = getPlayerCharacter(campaign);
+        if (!character) {
+            showToast('Non hai un personaggio associato a questa campagna.', 'info');
+            return;
         }
+
+        setEditingChar(character);
     };
 
-    const handleSendMessage = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!chatMessage.trim() || !selectedCampaign || !user) return;
-        const myChar = getPlayerCharacter(selectedCampaign);
-        try {
-            await api.post(`/campaigns/${selectedCampaign.id}/notes`, {
-                content: chatMessage,
-                userId: user.id,
-                characterId: myChar?.id,
-                type: 'CHAT'
-            });
-            setChatMessage('');
-            const updated = await api.get(`/campaigns/${selectedCampaign.id}`);
-            setSelectedCampaign(updated.data);
-        } catch (err) {
-            console.error("Chat error", err);
-        }
-    };
-
-    const handleBecomeDM = async (campaign: Campaign) => {
-        if (!confirm('Vuoi diventare il DM di questa avventura? Sostituirai il gestore attuale.')) return;
-        try {
-            await api.put(`/campaigns/${campaign.id}`, {
-                dmId: user?.id,
-                status: 'RECRUITING',
-                proposalStatus: 'DM_ASSIGNED'
-            });
-            refreshCampaigns();
-            setSelectedCampaign(null);
-            alert('Sei il nuovo DM! Ora configura le regole e la trama.');
-        } catch (err) {
-            alert('Impossibile diventare DM');
-        }
-    };
-
-    // --- Renderers ---
-    if (loading) return <div className="min-h-screen flex items-center justify-center bg-zinc-50"><Loader2 className="w-12 h-12 animate-spin text-black" /></div>;
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-zinc-50">
+                <Loader2 className="w-12 h-12 animate-spin text-black" />
+            </div>
+        );
+    }
 
     return (
-        <div className="min-h-screen bg-zinc-50 font-sans text-black pb-20">
-            {/* --- HEADER --- */}
-            <div className="bg-white border-b-4 border-black p-8 px-4 md:px-12 relative overflow-hidden">
-                <div className="max-w-7xl mx-auto relative z-10">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
-                        <div>
-                            {/* Adjusted Title Size and Style */}
-                            <h1 className="text-5xl md:text-7xl font-black uppercase leading-[0.9] tracking-tighter mb-4">
-                                D&D <span className="text-transparent bg-clip-text bg-gradient-to-r from-neo-violet to-neo-pink decoration-4 underline decoration-black underline-offset-4">Tracker</span>
-                            </h1>
-                            <p className="text-xl font-bold text-zinc-600 max-w-lg">
-                                Esplora dungeon, crea legami e tira d20. Il tuo compagno digitale per campagne epiche.
-                            </p>
-                        </div>
-                        <a href="https://dnd.wizards.com/it/how-to-play" target="_blank" rel="noreferrer"
-                            className="group flex items-center gap-2 px-6 py-3 bg-white border-4 border-black font-black uppercase hover:bg-neo-lime hover:-translate-y-1 hover:shadow-neo transition-all">
-                            Come Giocare <ExternalLink className="w-5 h-5 group-hover:rotate-45 transition-transform" />
-                        </a>
-                    </div>
+        <div className="min-h-screen bg-[#f5f1ea] text-black pb-20">
+            <section className="relative overflow-hidden border-b-4 border-black bg-[#111113] text-white">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(236,72,153,0.3),_transparent_28%),radial-gradient(circle_at_80%_10%,_rgba(6,182,212,0.25),_transparent_26%),linear-gradient(135deg,_rgba(255,255,255,0.05)_0%,_rgba(255,255,255,0)_40%)]" />
+                <div className="absolute -right-12 top-8 h-56 w-56 rounded-full border-[18px] border-white/10" />
+                <div className="absolute left-[-48px] bottom-[-70px] h-44 w-44 rotate-12 border-[14px] border-neo-yellow/40 bg-neo-yellow/10" />
+                <div className="absolute right-[18%] bottom-10 opacity-10">
+                    <Dice5 className="h-48 w-48 rotate-12" />
+                </div>
 
-                    {/* Onboarding Steps */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border-t-4 border-black pt-8">
-                        {[
-                            { step: '1', title: 'Iscriviti', text: 'Trova una campagna nella lista o proponi un nuovo tema in Bacheca.', color: 'bg-neo-pink', icon: UserPlus },
-                            { step: '2', title: 'Crea PG', text: 'Crea il tuo eroe. Rispetta il limite di 1 personaggio per avventura.', color: 'bg-neo-cyan', icon: Scroll },
-                            { step: '3', title: 'Gioca', text: 'Partecipa alle sessioni, chatta col party e consulta le note del DM.', color: 'bg-neo-yellow', icon: Dice5 }
-                        ].map((item, idx) => (
-                            <div key={idx} className="flex items-start gap-4 group">
-                                <div className={`${item.color} p-4 border-2 border-black shadow-neo group-hover:scale-110 transition-transform`}>
-                                    <item.icon className="w-8 h-8 text-black" />
+                <div className="relative mx-auto max-w-7xl px-4 py-12 md:px-8 md:py-16">
+                    <div className="grid gap-8 lg:grid-cols-[1.25fr_0.75fr] lg:items-start">
+                        <div>
+                            <div className="mb-5 inline-flex items-center gap-2 border-2 border-white/60 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.24em] backdrop-blur-sm">
+                                <Sparkles className="h-4 w-4 text-neo-yellow" />
+                                Adventurer Hub
+                            </div>
+
+                            <h1 className="max-w-4xl text-5xl font-black uppercase leading-[0.9] tracking-[-0.06em] md:text-7xl xl:text-8xl">
+                                D&amp;D <span className="bg-gradient-to-r from-neo-yellow via-neo-pink to-neo-cyan bg-clip-text text-transparent">Tracker</span>
+                            </h1>
+
+                            <p className="mt-5 max-w-3xl text-lg font-bold leading-relaxed text-zinc-200 md:text-2xl">
+                                Raduna il party, trova il master e apri la prossima avventura. Questa sezione ora parla davvero il linguaggio di campagne, quest, recruiting e cronache di tavolo.
+                            </p>
+
+                            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                                <button
+                                    onClick={() => openCreationFlow('dm')}
+                                    className="inline-flex items-center justify-center gap-2 border-2 border-black bg-neo-lime px-6 py-4 font-black uppercase text-black shadow-neo hover:-translate-y-1 transition-transform"
+                                >
+                                    <Crown className="h-5 w-5" /> Crea una campagna
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setViewMode('board');
+                                        openCreationFlow('proposal');
+                                    }}
+                                    className="inline-flex items-center justify-center gap-2 border-2 border-white bg-transparent px-6 py-4 font-black uppercase text-white hover:bg-white hover:text-black transition-colors"
+                                >
+                                    <FileText className="h-5 w-5" /> Pubblica in bacheca
+                                </button>
+                                <a
+                                    href="https://dnd.wizards.com/it/how-to-play"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center justify-center gap-2 border-2 border-white/60 bg-white/10 px-6 py-4 font-black uppercase text-white backdrop-blur-sm hover:bg-white hover:text-black transition-colors"
+                                >
+                                    Come Giocare <ExternalLink className="h-5 w-5" />
+                                </a>
+                            </div>
+
+                            <div className="mt-10 grid gap-4 md:grid-cols-3">
+                                {[
+                                    {
+                                        label: 'Campagne Attive',
+                                        value: activeCampaigns.length,
+                                        accent: 'bg-neo-cyan',
+                                        icon: Sword
+                                    },
+                                    {
+                                        label: 'Posti Liberi',
+                                        value: openSeats,
+                                        accent: 'bg-neo-lime',
+                                        icon: Users
+                                    },
+                                    {
+                                        label: 'Quest in Bacheca',
+                                        value: proposals.length,
+                                        accent: 'bg-neo-yellow',
+                                        icon: Scroll
+                                    }
+                                ].map(item => (
+                                    <div key={item.label} className="border-2 border-white/20 bg-white/10 p-4 backdrop-blur-sm">
+                                        <div className="mb-3 flex items-center justify-between">
+                                            <span className={`inline-flex h-11 w-11 items-center justify-center border-2 border-black ${item.accent}`}>
+                                                <item.icon className="h-5 w-5 text-black" />
+                                            </span>
+                                            <span className="text-4xl font-black leading-none">{item.value}</span>
+                                        </div>
+                                        <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-200">{item.label}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="grid gap-4">
+                            <div className="border-4 border-black bg-[#f4ead7] p-5 text-black shadow-neo">
+                                <div className="mb-4 flex items-center justify-between">
+                                    <p className="text-xs font-black uppercase tracking-[0.24em]">Guild Ledger</p>
+                                    <Wand2 className="h-5 w-5" />
                                 </div>
-                                <div>
-                                    <h3 className="font-black text-xl uppercase mb-1">{item.step}. {item.title}</h3>
-                                    <p className="font-medium text-zinc-600 leading-snug text-sm">{item.text}</p>
+                                <div className="space-y-3">
+                                    {[
+                                        `Hai ${myCampaigns.length} avventure nel tuo registro.`,
+                                        `${recruitingCampaigns.length} tavoli stanno cercando giocatori in questo momento.`,
+                                        `${proposals.length} idee community stanno aspettando un DM o un party.`
+                                    ].map(text => (
+                                        <div key={text} className="flex items-start gap-3 border-2 border-black bg-white p-3">
+                                            <span className="mt-1 h-3 w-3 shrink-0 border border-black bg-neo-pink" />
+                                            <p className="text-sm font-bold leading-relaxed">{text}</p>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
-                        ))}
-                    </div>
-                </div>
-                {/* Background Decor */}
-                <div className="absolute top-0 right-0 opacity-5 pointer-events-none transform translate-x-1/4 -translate-y-1/4">
-                    <Dice5 className="w-96 h-96" />
-                </div>
-            </div>
 
-            <main className="max-w-7xl mx-auto p-4 md:p-12">
-                {/* --- CONTROLS --- */}
-                <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-12 sticky top-4 z-40 bg-zinc-50/90 backdrop-blur-sm p-4 border-2 border-black shadow-neo-sm">
-                    <div className="flex gap-2">
-                        {[
-                            { id: 'all', label: 'Tutte', icon: Compass },
-                            { id: 'my_campaigns', label: 'Le Mie', icon: Crown },
-                            { id: 'board', label: 'Bacheca', icon: FileText }
-                        ].map(tab => (
-                            <button
-                                key={tab.id}
-                                onClick={() => { setViewMode(tab.id as any); setSelectedCampaign(null); }}
-                                className={`px-4 py-2 flex items-center gap-2 font-black uppercase text-sm border-2 border-black transition-all 
-                                    ${viewMode === tab.id ? 'bg-black text-white shadow-none translate-y-1' : 'bg-white hover:bg-zinc-100 hover:-translate-y-1 hover:shadow-neo'}`}
-                            >
-                                <tab.icon className="w-4 h-4" /> {tab.label}
-                            </button>
-                        ))}
-                    </div>
-
-                    <button
-                        onClick={() => setShowCreateModal(true)}
-                        className="bg-neo-violet text-white px-6 py-2 border-2 border-black shadow-neo font-black uppercase hover:shadow-neo-hover hover:-translate-y-1 transition-all flex items-center gap-2"
-                    >
-                        <Plus className="w-5 h-5" /> Nuova Avventura
-                    </button>
-                </div>
-
-                {/* --- CONTENT LIST --- */}
-                {!selectedCampaign && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {filteredCampaigns.map(campaign => (
-                            <div
-                                key={campaign.id}
-                                onClick={() => setSelectedCampaign(campaign)}
-                                className={`
-                                    relative flex flex-col h-full border-4 border-black transition-all duration-300 cursor-pointer group
-                                    ${campaign.isProposal ? 'bg-neo-bg hover:rotate-1 shadow-none hover:shadow-neo-lg' : 'bg-white shadow-neo hover:shadow-neo-xl hover:-translate-y-2'}
-                                `}
-                            >
-                                {/* Active/Proposal Indicator */}
-                                {campaign.isProposal && (
-                                    <div className="absolute -top-3 -right-3 z-20">
-                                        <span className="bg-neo-yellow border-2 border-black px-3 py-1 font-black text-xs uppercase shadow-sm rotate-3 inline-block">
-                                            Cercasi DM
-                                        </span>
+                            <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+                                {[
+                                    {
+                                        title: 'Scopri',
+                                        text: 'Apri una scheda avventura completa con party, note e stato campagna.',
+                                        icon: Map,
+                                        accent: 'bg-neo-pink'
+                                    },
+                                    {
+                                        title: 'Candidati',
+                                        text: 'Usa la campagna per inviare una richiesta con personaggio e messaggio al DM.',
+                                        icon: UserPlus,
+                                        accent: 'bg-neo-cyan'
+                                    },
+                                    {
+                                        title: 'Traccia',
+                                        text: 'Se partecipi, puoi aggiornare il tuo personaggio e seguire la cronaca.',
+                                        icon: Shield,
+                                        accent: 'bg-neo-yellow'
+                                    }
+                                ].map(item => (
+                                    <div key={item.title} className="border-2 border-white/20 bg-white/10 p-4 backdrop-blur-sm">
+                                        <div className={`mb-4 inline-flex border-2 border-black p-3 ${item.accent}`}>
+                                            <item.icon className="h-5 w-5 text-black" />
+                                        </div>
+                                        <h2 className="mb-2 text-xl font-black uppercase">{item.title}</h2>
+                                        <p className="text-sm font-medium leading-relaxed text-zinc-200">{item.text}</p>
                                     </div>
-                                )}
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
-                                {/* Image Section */}
-                                <div className="h-48 overflow-hidden border-b-4 border-black relative">
-                                    <img src={campaign.image} alt={campaign.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                                    <div className={`absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors ${campaign.status === 'RECRUITING' ? 'ring-inset ring-4 ring-neo-green/50' : ''}`} />
+            <main className="mx-auto max-w-7xl px-4 py-10 md:px-8 md:py-12">
+                <div className="mb-8 border-4 border-black bg-white shadow-neo">
+                    <div className="flex flex-col gap-5 border-b-2 border-black px-5 py-5 md:flex-row md:items-center md:justify-between">
+                        <div className="flex flex-wrap gap-2">
+                            {[
+                                { id: 'all', label: 'Avventure', icon: Sword },
+                                { id: 'my_campaigns', label: 'Le Mie Cronache', icon: Crown },
+                                { id: 'board', label: 'Bacheca', icon: FileText }
+                            ].map(tab => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setViewMode(tab.id as ViewMode)}
+                                    className={`inline-flex items-center gap-2 border-2 border-black px-4 py-3 font-black uppercase transition-all ${viewMode === tab.id ? 'bg-black text-white shadow-neo-sm translate-y-1' : 'bg-white hover:bg-zinc-100 hover:-translate-y-1'}`}
+                                >
+                                    <tab.icon className="h-4 w-4" />
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
 
-                                    {/* Overlay Info */}
-                                    <div className="absolute bottom-0 left-0 p-4 w-full bg-gradient-to-t from-black/80 to-transparent">
-                                        <div className="flex gap-2 mb-1">
-                                            <span className="px-2 py-0.5 bg-white border-2 border-black text-[10px] font-black uppercase tracking-wider">
-                                                {campaign.system}
-                                            </span>
-                                            {!campaign.isProposal && (
-                                                <span className={`px-2 py-0.5 border-2 border-black text-[10px] font-black uppercase tracking-wider text-white ${campaign.status === 'RECRUITING' ? 'bg-neo-green text-black' : 'bg-zinc-600'}`}>
-                                                    {campaign.status}
-                                                </span>
-                                            )}
+                        <button
+                            onClick={() => openCreationFlow()}
+                            className="inline-flex items-center justify-center gap-2 border-2 border-black bg-neo-violet px-5 py-3 font-black uppercase text-white shadow-neo hover:-translate-y-1 transition-transform"
+                        >
+                            <Plus className="h-5 w-5" /> Nuova avventura
+                        </button>
+                    </div>
+
+                    <div className="grid gap-4 px-5 py-5 md:grid-cols-[auto_1fr_auto] md:items-center">
+                        <div className={`inline-flex h-14 w-14 items-center justify-center border-2 border-black ${currentView.accent}`}>
+                            <currentView.icon className="h-7 w-7 text-black" />
+                        </div>
+                        <div>
+                            <h2 className="text-3xl font-black uppercase">{currentView.title}</h2>
+                            <p className="mt-1 max-w-3xl font-medium text-zinc-600">{currentView.description}</p>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-black uppercase md:text-right">
+                            <span className="border border-black bg-zinc-100 px-2 py-2">{filteredCampaigns.length} card visibili</span>
+                            <span className="border border-black bg-zinc-100 px-2 py-2">{recruitingCampaigns.length} in recruiting</span>
+                        </div>
+                    </div>
+                </div>
+
+                {viewMode === 'board' && (
+                    <section className="mb-8 grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
+                        <div className="border-4 border-black bg-[#f6e8c8] p-6 shadow-neo relative overflow-hidden">
+                            <div className="absolute right-4 top-4 rotate-6 border-2 border-black bg-neo-pink px-3 py-1 text-xs font-black uppercase text-white">
+                                Mission Board
+                            </div>
+                            <h3 className="max-w-2xl text-3xl font-black uppercase leading-tight">
+                                La Bacheca non è una lista generica: è il luogo dove la community lancia idee, cerca un DM o prova a far nascere la prossima campagna.
+                            </h3>
+                            <p className="mt-4 max-w-3xl font-medium leading-relaxed text-zinc-700">
+                                Qui mettiamo annunci ancora “in formazione”: proposte narrative, call aperte, richieste di regia e concept che devono trasformarsi in vere schede avventura.
+                            </p>
+
+                            <div className="mt-6 grid gap-4 md:grid-cols-3">
+                                {[
+                                    {
+                                        title: 'Cerco un DM',
+                                        text: 'Hai un concept ma non vuoi o non puoi masterarlo. Pubblichi un annuncio e aspetti candidature.',
+                                        accent: 'bg-neo-yellow'
+                                    },
+                                    {
+                                        title: 'Cerco Giocatori',
+                                        text: 'Sei il master e vuoi testare interesse o reclutare prima di costruire la campagna completa.',
+                                        accent: 'bg-neo-lime'
+                                    },
+                                    {
+                                        title: 'Propongo un Concept',
+                                        text: 'Pitch rapido, tono, sistema e hook narrativo. La community vota l’interesse tramite richieste.',
+                                        accent: 'bg-neo-cyan'
+                                    }
+                                ].map(item => (
+                                    <div key={item.title} className="border-2 border-black bg-white p-4">
+                                        <div className={`mb-3 inline-block border-2 border-black px-2 py-1 text-[10px] font-black uppercase ${item.accent}`}>
+                                            Formato Bacheca
+                                        </div>
+                                        <h4 className="text-lg font-black uppercase">{item.title}</h4>
+                                        <p className="mt-2 text-sm font-medium text-zinc-700">{item.text}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="grid gap-4">
+                            <button
+                                onClick={() => openCreationFlow('proposal')}
+                                className="border-4 border-black bg-neo-yellow p-5 text-left shadow-neo hover:-translate-y-1 transition-transform"
+                            >
+                                <div className="mb-3 flex items-center gap-3">
+                                    <FileText className="h-6 w-6" />
+                                    <span className="text-xs font-black uppercase tracking-[0.24em]">Pubblica un annuncio</span>
+                                </div>
+                                <p className="text-2xl font-black uppercase">Cerco DM / Propongo Campagna</p>
+                                <p className="mt-2 font-medium">Usa la bacheca per far partire un’idea ancora non strutturata come campagna completa.</p>
+                            </button>
+
+                            <button
+                                onClick={() => openCreationFlow('dm')}
+                                className="border-4 border-black bg-neo-lime p-5 text-left shadow-neo hover:-translate-y-1 transition-transform"
+                            >
+                                <div className="mb-3 flex items-center gap-3">
+                                    <Crown className="h-6 w-6" />
+                                    <span className="text-xs font-black uppercase tracking-[0.24em]">Apri un tavolo vero</span>
+                                </div>
+                                <p className="text-2xl font-black uppercase">Crea la scheda campagna</p>
+                                <p className="mt-2 font-medium">Se sei già pronto a masterare, salta la bacheca e pubblica direttamente una campagna completa.</p>
+                            </button>
+                        </div>
+                    </section>
+                )}
+
+                {filteredCampaigns.length === 0 ? (
+                    <div className="border-4 border-black bg-white p-10 text-center shadow-neo">
+                        <h2 className="text-3xl font-black uppercase mb-3">Qui il tavolo è ancora vuoto</h2>
+                        <p className="mx-auto max-w-2xl font-medium text-zinc-600">
+                            Cambia filtro oppure pubblica una nuova avventura. La bacheca è pensata per far nascere idee, non per lasciarle ferme.
+                        </p>
+                    </div>
+                ) : (
+                    <div className={`grid gap-6 md:gap-8 ${viewMode === 'board' ? 'md:grid-cols-2 xl:grid-cols-3' : 'md:grid-cols-2 xl:grid-cols-3'}`}>
+                        {filteredCampaigns.map((campaign, index) => {
+                            const playerCharacter = getPlayerCharacter(campaign);
+                            const isDm = campaign.dm.id === user?.id;
+                            const isJoined = Boolean(playerCharacter);
+                            const participantCount = campaign.participants?.length ?? campaign._count?.participants ?? 0;
+                            const openSlots = Math.max((campaign.maxPlayers || 0) - participantCount, 0);
+
+                            if (viewMode === 'board') {
+                                return (
+                                    <article
+                                        key={campaign.id}
+                                        className={`relative flex h-full flex-col border-4 border-black bg-[#fff7df] p-5 shadow-neo transition-transform hover:-translate-y-2 ${index % 2 === 0 ? 'md:rotate-[-1deg]' : 'md:rotate-[1deg]'}`}
+                                    >
+                                        <div className="mb-4 flex flex-wrap items-center gap-2">
+                                            <span className="border-2 border-black bg-neo-yellow px-2 py-1 text-[10px] font-black uppercase">Cercasi DM</span>
+                                            <span className="border-2 border-black bg-white px-2 py-1 text-[10px] font-black uppercase">{campaign.system}</span>
+                                            <span className="border-2 border-black bg-white px-2 py-1 text-[10px] font-black uppercase">{campaignTypeLabel[campaign.type]}</span>
+                                        </div>
+
+                                        <h3 className="text-3xl font-black uppercase leading-none">{campaign.title}</h3>
+                                        <p className="mt-4 flex-1 text-sm font-medium leading-relaxed text-zinc-700">{campaign.description}</p>
+
+                                        <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm font-bold">
+                                            <div className="border-2 border-black bg-white p-3">
+                                                <div className="text-[10px] uppercase text-zinc-500 mb-1">Interessati</div>
+                                                <div className="flex items-center gap-2"><Users className="h-4 w-4" /> {campaign._count?.requests || 0}</div>
+                                            </div>
+                                            <div className="border-2 border-black bg-white p-3">
+                                                <div className="text-[10px] uppercase text-zinc-500 mb-1">Frequenza</div>
+                                                <div>{campaign.frequency}</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-5 border-2 border-dashed border-black bg-black/5 p-3">
+                                            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Pitch Community</div>
+                                            <p className="mt-1 text-sm font-bold">
+                                                Concept proposto da {campaign.proposer?.name || 'community'} per far nascere una nuova spedizione.
+                                            </p>
+                                        </div>
+
+                                        <div className="mt-5 flex flex-col gap-3">
+                                            <button
+                                                onClick={() => openCampaign(campaign.id)}
+                                                className="flex items-center justify-center gap-2 border-2 border-black bg-black px-4 py-3 font-black uppercase text-white hover:bg-neo-pink transition-colors"
+                                            >
+                                                Apri Annuncio <ChevronRight className="h-4 w-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => openCreationFlow('proposal')}
+                                                className="flex items-center justify-center gap-2 border-2 border-black bg-white px-4 py-3 font-black uppercase hover:bg-neo-yellow transition-colors"
+                                            >
+                                                <Sparkles className="h-4 w-4" /> Pubblica qualcosa di simile
+                                            </button>
+                                        </div>
+                                    </article>
+                                );
+                            }
+
+                            return (
+                                <article
+                                    key={campaign.id}
+                                    className="group relative flex h-full flex-col overflow-hidden border-4 border-black bg-white shadow-neo transition-transform duration-300 hover:-translate-y-2 hover:shadow-neo-xl"
+                                >
+                                    <div className="relative h-56 overflow-hidden border-b-4 border-black">
+                                        <img src={campaign.image} alt={campaign.title} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+                                        <div className="absolute left-4 top-4 inline-flex items-center gap-2 border-2 border-black bg-white px-3 py-1 text-[10px] font-black uppercase">
+                                            {campaignTypeLabel[campaign.type]}
+                                        </div>
+                                        <div className={`absolute right-4 top-4 border-2 border-black px-3 py-1 text-[10px] font-black uppercase ${statusStyles[campaign.status] || 'bg-white text-black'}`}>
+                                            {campaign.status}
+                                        </div>
+                                        <div className="absolute inset-x-4 bottom-4 flex flex-wrap gap-2">
+                                            <span className="border-2 border-black bg-neo-pink px-2 py-1 text-[10px] font-black uppercase text-white">{campaign.system}</span>
+                                            <span className="border-2 border-black bg-white px-2 py-1 text-[10px] font-black uppercase">{campaign.levelRange}</span>
+                                            <span className="border-2 border-black bg-white px-2 py-1 text-[10px] font-black uppercase">{campaign.frequency}</span>
                                         </div>
                                     </div>
-                                </div>
 
-                                {/* Content Section */}
-                                <div className="p-6 flex-1 flex flex-col relative overflow-hidden">
-                                    {/* Proposal Blueprint Pattern */}
-                                    {campaign.isProposal && (
-                                        <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
-                                            style={{ backgroundImage: 'radial-gradient(circle, black 1px, transparent 1px)', backgroundSize: '10px 10px' }}></div>
-                                    )}
-
-                                    <h3 className="text-2xl font-black uppercase leading-tight mb-3 group-hover:text-neo-violet transition-colors">
-                                        {campaign.title}
-                                    </h3>
-
-                                    <p className="text-zinc-600 font-medium text-sm line-clamp-3 mb-6 flex-grow">
-                                        {campaign.description}
-                                    </p>
-
-                                    {/* Footer */}
-                                    <div className="mt-auto pt-4 border-t-2 border-black/10 flex justify-between items-center">
-                                        {campaign.isProposal ? (
-                                            <div className="flex items-center gap-2">
-                                                <div className="flex -space-x-2">
-                                                    {/* Fake avatars for interest */}
-                                                    {[1, 2, 3].map(i => <div key={i} className="w-6 h-6 rounded-full bg-zinc-300 border-2 border-white"></div>)}
-                                                </div>
-                                                <span className="text-xs font-bold text-zinc-500">+{campaign._count?.requests || 0} interessati</span>
+                                    <div className="flex flex-1 flex-col gap-5 p-6">
+                                        <div>
+                                            <div className="mb-2 inline-flex items-center gap-2 border border-black bg-zinc-100 px-2 py-1 text-[10px] font-black uppercase tracking-[0.2em]">
+                                                <Flame className="h-3 w-3" /> {campaign.status === 'RECRUITING' ? 'Tavolo Aperto' : 'Campagna In Corso'}
                                             </div>
-                                        ) : (
-                                            <div className="flex items-center gap-2 text-zinc-700">
-                                                <Users className="w-4 h-4" />
-                                                <span className="font-bold text-sm">{campaign.participants?.length || 0}/{campaign.maxPlayers || 4}</span>
+                                            <h3 className="text-3xl font-black uppercase leading-tight">{campaign.title}</h3>
+                                            <p className="mt-3 text-sm font-medium leading-relaxed text-zinc-600 line-clamp-4">{campaign.description}</p>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div className="border-2 border-black bg-[#f5f1ea] p-3">
+                                                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Party</div>
+                                                <div className="mt-1 flex items-center gap-2 text-sm font-black">
+                                                    <Users className="h-4 w-4" /> {participantCount}/{campaign.maxPlayers || 4}
+                                                </div>
+                                                <div className="mt-1 text-xs font-medium text-zinc-600">{openSlots} slot disponibili</div>
+                                            </div>
+                                            <div className="border-2 border-black bg-[#f5f1ea] p-3">
+                                                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Ritmo</div>
+                                                <div className="mt-1 text-sm font-black">{campaign.sessionDuration || '3-4 hours'}</div>
+                                                <div className="mt-1 text-xs font-medium text-zinc-600">{campaign.platform || 'In Person'}</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="border-2 border-black bg-white p-3 flex items-center gap-3">
+                                            <img
+                                                src={getAvatarUrl(campaign.dm.avatar) || '/default-avatar.svg'}
+                                                alt={campaign.dm.name}
+                                                className="h-12 w-12 border-2 border-black object-cover bg-zinc-100"
+                                            />
+                                            <div className="min-w-0">
+                                                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Dungeon Master</div>
+                                                <div className="truncate text-lg font-black">{campaign.dm.name}</div>
+                                            </div>
+                                        </div>
+
+                                        {(isDm || isJoined) && (
+                                            <div className="border-2 border-black bg-neo-cyan/15 p-3">
+                                                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-1">La tua posizione</div>
+                                                <div className="font-black">
+                                                    {isDm ? 'Sei il Dungeon Master di questo tavolo.' : `${playerCharacter?.name} · ${playerCharacter?.class} Lv.${playerCharacter?.level}`}
+                                                </div>
                                             </div>
                                         )}
 
-                                        <div className="bg-black text-white px-3 py-1 text-xs font-black uppercase flex items-center gap-1 group-hover:bg-neo-pink transition-colors">
-                                            Dettagli <ChevronRight className="w-3 h-3" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-                {/* --- CAMPAIGN DETAILS --- */}
-                {selectedCampaign && (
-                    <div className="animate-in slide-in-from-bottom duration-300">
-                        <button
-                            onClick={() => setSelectedCampaign(null)}
-                            className="mb-6 flex items-center gap-2 font-black uppercase hover:underline"
-                        >
-                            <ChevronRight className="w-5 h-5 rotate-180" /> Torna alla lista
-                        </button>
-
-                        <div className="bg-white border-4 border-black shadow-neo-lg overflow-hidden">
-                            {/* Hero */}
-                            <div className="h-80 relative">
-                                <img src={selectedCampaign.image} className="w-full h-full object-cover" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-                                <div className="absolute bottom-0 left-0 p-8 w-full">
-                                    <div className="flex justify-between items-end">
-                                        <div>
-                                            <div className="flex gap-2 mb-4">
-                                                <span className="bg-neo-violet text-white px-3 py-1 font-black uppercase text-sm border-2 border-white shadow-sm transform -rotate-2">{selectedCampaign.system}</span>
-                                                <span className="bg-neo-pink text-white px-3 py-1 font-black uppercase text-sm border-2 border-white shadow-sm transform rotate-1">{selectedCampaign.type}</span>
-                                            </div>
-                                            <h2 className="text-5xl md:text-7xl font-black text-white uppercase mb-2 drop-shadow-lg">{selectedCampaign.title}</h2>
-                                        </div>
-                                        {/* DM Card (floating) */}
-                                        <div className="hidden md:flex items-center gap-3 bg-white p-3 border-4 border-black shadow-neo transform translate-y-12">
-                                            <img src={selectedCampaign.dm.avatar || ""} className="w-12 h-12 border-2 border-black" />
-                                            <div>
-                                                <div className="text-[10px] uppercase font-black text-zinc-400">Dungeon Master</div>
-                                                <div className="font-black text-lg leading-none">{selectedCampaign.dm.name}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Navigation */}
-                            <div className="flex overflow-x-auto border-b-4 border-black bg-zinc-100 p-2 gap-2 pl-4 md:pl-8 pt-16 md:pt-4">
-                                {['details', 'party', 'chat'].map(tab => (
-                                    <button
-                                        key={tab}
-                                        onClick={() => setActiveTab(tab as any)}
-                                        className={`px-6 py-3 font-black uppercase text-sm border-2 transition-all ${activeTab === tab
-                                            ? 'bg-black text-white border-black shadow-neo translate-y-[-2px]'
-                                            : 'bg-white text-black border-transparent hover:border-black hover:bg-zinc-50'}`}
-                                    >
-                                        {tab === 'details' ? 'Info & Regole' : tab === 'chat' ? 'Chat & Note' : 'Avventurieri'}
-                                    </button>
-                                ))}
-                            </div>
-
-                            <div className="p-8">
-                                {/* TAB 1: INFO & RULES */}
-                                {activeTab === 'details' && (
-                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                                        <div className="lg:col-span-2 space-y-8">
-                                            {selectedCampaign.isProposal && (
-                                                <div className="bg-neo-yellow/30 border-4 border-black border-dashed p-6 mb-6">
-                                                    <div className="flex items-center gap-4 mb-4">
-                                                        <AlertTriangle className="w-10 h-10 text-neo-yellow stroke-[3px]" />
-                                                        <div>
-                                                            <h3 className="text-2xl font-black uppercase">Cercasi Dungeon Master</h3>
-                                                            <p className="font-medium">Questa è una proposta della community. Serve un eroe che la guidi.</p>
-                                                        </div>
-                                                    </div>
-                                                    <button
-                                                        onClick={() => handleBecomeDM(selectedCampaign)}
-                                                        className="w-full bg-black text-white px-6 py-4 font-black uppercase hover:bg-zinc-800 flex justify-center items-center gap-2 text-lg shadow-neo hover:-translate-y-1 transition-all"
-                                                    >
-                                                        <Crown className="w-6 h-6" /> Prendi il controllo (Diventa DM)
-                                                    </button>
-                                                </div>
-                                            )}
-
-                                            <div>
-                                                <h3 className="text-2xl font-black uppercase mb-4 flex items-center gap-2">
-                                                    <BookOpen className="w-6 h-6" /> Trama
-                                                </h3>
-                                                <div className="prose-lg font-medium text-zinc-800 p-6 bg-zinc-50 border-l-4 border-neo-violet">
-                                                    {selectedCampaign.description}
-                                                    {selectedCampaign.plot && <p className="mt-4 pt-4 border-t-2 border-dashed border-zinc-300">{selectedCampaign.plot}</p>}
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <h3 className="text-2xl font-black uppercase mb-4 flex items-center gap-2">
-                                                    <Scale className="w-6 h-6" /> Regole del Tavolo
-                                                </h3>
-                                                <div className="bg-zinc-900 text-zinc-100 p-6 font-mono text-sm leading-relaxed border-2 border-black shadow-neo relative overflow-hidden">
-                                                    <div className="absolute top-0 right-0 p-2 opacity-20"><Shield className="w-24 h-24" /></div>
-                                                    {selectedCampaign.rules || "Nessuna regola specifica inserita dal DM. Preparati al caos."}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-6">
-                                            <div className="bg-neo-cyan border-4 border-black p-6 shadow-neo">
-                                                <h4 className="font-black uppercase mb-4 text-xl">Scheda Sessione</h4>
-                                                <ul className="space-y-4 font-bold text-sm">
-                                                    <li className="flex justify-between items-center border-b border-black/20 pb-2">
-                                                        <span className="flex items-center gap-2"><Sword className="w-4 h-4" /> Livelli</span>
-                                                        <span className="bg-white px-2 py-1 border border-black">{selectedCampaign.levelRange}</span>
-                                                    </li>
-                                                    <li className="flex justify-between items-center border-b border-black/20 pb-2">
-                                                        <span className="flex items-center gap-2"><Users className="w-4 h-4" /> Min Players</span>
-                                                        <span className="bg-white px-2 py-1 border border-black">{selectedCampaign.minPlayers || 3}</span>
-                                                    </li>
-                                                    <li className="flex justify-between items-center border-b border-black/20 pb-2">
-                                                        <span className="flex items-center gap-2"><Calendar className="w-4 h-4" /> Frequenza</span>
-                                                        <span className="bg-white px-2 py-1 border border-black">{selectedCampaign.frequency}</span>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* TAB 2: PARTY */}
-                                {activeTab === 'party' && (
-                                    <div>
-                                        {/* Same implementation as before but verify container exists */}
-                                        <div className="flex justify-between items-center mb-6">
-                                            <h3 className="text-2xl font-black uppercase">Il Party ({selectedCampaign.participants.length}/{selectedCampaign.maxPlayers || 6})</h3>
-                                            {!isUserInCampaign(selectedCampaign) && selectedCampaign.status === 'RECRUITING' && (
+                                        <div className="mt-auto flex flex-col gap-3 sm:flex-row">
+                                            <button
+                                                onClick={() => openCampaign(campaign.id)}
+                                                className="flex-1 inline-flex items-center justify-center gap-2 border-2 border-black bg-black px-4 py-3 font-black uppercase text-white hover:bg-neo-pink transition-colors"
+                                            >
+                                                Apri scheda avventura <ChevronRight className="h-4 w-4" />
+                                            </button>
+                                            {isJoined && (
                                                 <button
-                                                    onClick={() => alert('Crea un personaggio dalla lista "Le Mie Campagne" o usa il tasto "+"')}
-                                                    className="bg-neo-green px-6 py-2 border-2 border-black font-black uppercase shadow-neo hover:translate-y-1 hover:shadow-none"
+                                                    onClick={() => handleEditCharacter(campaign)}
+                                                    className="inline-flex items-center justify-center gap-2 border-2 border-black bg-neo-cyan px-4 py-3 font-black uppercase hover:bg-neo-lime transition-colors"
                                                 >
-                                                    Unisciti
+                                                    <PenTool className="h-4 w-4" /> Modifica PG
                                                 </button>
                                             )}
                                         </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                            {selectedCampaign.participants.map(p => (
-                                                <div key={p.id} className="border-4 border-black bg-white group hover:-translate-y-1 transition-transform">
-                                                    {/* Character Card Header */}
-                                                    <div className="bg-zinc-900 text-white p-3 flex justify-between items-center">
-                                                        <span className="font-black uppercase truncate">{p.character.name}</span>
-                                                        <div className="flex items-center gap-1 text-xs text-neo-yellow font-bold">
-                                                            LVL {p.character.level}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="p-4 flex gap-4 items-center">
-                                                        <div className="relative">
-                                                            <img src={p.character.avatar} className="w-20 h-20 border-2 border-black object-cover" />
-                                                            <div className="absolute -bottom-2 -right-2 bg-neo-pink border border-black w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black text-white">
-                                                                HP
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex-1">
-                                                            <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-1">{p.character.race}</div>
-                                                            <div className="font-black text-lg uppercase leading-none mb-2">{p.character.class}</div>
-                                                            <div className="text-xs font-medium text-zinc-500">Giocato da {p.user.name}</div>
-                                                        </div>
-                                                    </div>
-
-                                                    {p.user.id === user?.id && (
-                                                        <button
-                                                            onClick={() => { setEditingChar(p.character); }}
-                                                            className="w-full py-2 bg-zinc-100 hover:bg-black hover:text-white border-t-2 border-black font-bold uppercase text-xs transition-colors"
-                                                        >
-                                                            Modifica Scheda
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            ))}
-
-                                            {!isUserInCampaign(selectedCampaign) && (
-                                                <div
-                                                    onClick={() => alert("Funzionalità di unione veloce in arrivo")}
-                                                    className="border-4 border-black border-dashed flex items-center justify-center bg-zinc-50 h-full min-h-[160px] cursor-pointer hover:bg-zinc-100 group"
-                                                >
-                                                    <div className="text-center text-zinc-400 font-black uppercase group-hover:text-black transition-colors">
-                                                        <Plus className="w-8 h-8 mx-auto mb-2" />
-                                                        Slot Libero
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
                                     </div>
-                                )}
-
-                                {/* TAB 3: CHAT */}
-                                {activeTab === 'chat' && (
-                                    <div className="flex flex-col h-[600px] border-4 border-black bg-white shadow-neo">
-                                        {/* Chat implementation remains similar but with cleaner bubbles */}
-                                        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-zinc-50 custom-scrollbar">
-                                            {selectedCampaign.notes?.filter(n => n.type === 'CHAT').length === 0 && (
-                                                <div className="text-center text-zinc-400 py-10 italic">Nessun messaggio. Rompi il ghiaccio!</div>
-                                            )}
-                                            {selectedCampaign.notes?.filter(n => n.type === 'CHAT').map(note => (
-                                                <div key={note.id} className={`flex items-end gap-2 ${note.userId === user?.id ? 'flex-row-reverse' : ''} mb-2`}>
-                                                    <img
-                                                        src={note.character?.avatar || note.user?.avatar || "/default-avatar.svg"}
-                                                        className="w-8 h-8 border border-black bg-white object-cover"
-                                                    />
-                                                    <div className={`max-w-[70%] p-3 border-2 border-black text-sm font-medium shadow-sm ${note.userId === user?.id ? 'bg-neo-cyan rounded-tr-none' :
-                                                        note.userId === selectedCampaign.dm.id ? 'bg-neo-yellow rounded-tl-none' : 'bg-white rounded-tl-none'
-                                                        }`}>
-                                                        <div className="text-[10px] font-black uppercase mb-1 opacity-50">{note.character?.name || note.user?.name}</div>
-                                                        {note.content}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <form onSubmit={handleSendMessage} className="p-4 bg-white border-t-4 border-black flex gap-2">
-                                            <input
-                                                type="text"
-                                                value={chatMessage}
-                                                onChange={(e) => setChatMessage(e.target.value)}
-                                                placeholder={isUserInCampaign(selectedCampaign) ? "Scrivi come il tuo personaggio..." : "Chatta..."}
-                                                className="flex-1 p-3 border-2 border-black focus:shadow-neo focus:outline-none font-bold"
-                                            />
-                                            <button
-                                                type="submit"
-                                                className="bg-black text-white px-4 py-2 border-2 border-black hover:bg-neo-lime hover:text-black transition-colors font-black uppercase"
-                                            >
-                                                Invia
-                                            </button>
-                                        </form>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                                </article>
+                            );
+                        })}
                     </div>
                 )}
             </main>
 
-            {/* Modals omitted for brevity, keeping previous logic but ensures imports are correct */}
             {showCreateModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-                    <div className="bg-white border-4 border-black shadow-neo-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                <div className="app-modal-shell bg-black/80 animate-in fade-in">
+                    <div className="app-modal-panel max-w-2xl">
                         {!createMode ? (
                             <div className="p-8 text-center space-y-8">
-                                <h2 className="text-4xl font-black uppercase">Scegli il tuo Destino</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <h2 className="text-4xl font-black uppercase">Scegli il tuo ruolo nella gilda</h2>
+                                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                     <button
                                         onClick={() => setCreateMode('dm')}
-                                        className="p-8 border-4 border-black hover:bg-neo-violet hover:text-white transition-all group shadow-neo hover:shadow-neo-lg hover:-translate-y-1"
+                                        className="border-4 border-black p-8 shadow-neo transition-all hover:-translate-y-1 hover:bg-neo-violet hover:text-white"
                                     >
-                                        <Crown className="w-16 h-16 mx-auto mb-4" />
-                                        <h3 className="text-2xl font-black uppercase mb-2">Sono un DM</h3>
-                                        <p className="font-medium text-zinc-500 group-hover:text-white/80">Crea una campagna completa, stabilisci le regole e recluta giocatori.</p>
+                                        <Crown className="mx-auto mb-4 h-16 w-16" />
+                                        <h3 className="text-2xl font-black uppercase">Sono un DM</h3>
+                                        <p className="mt-2 font-medium text-zinc-500 hover:text-inherit">
+                                            Apro un tavolo completo con regole, tono e recruiting strutturato.
+                                        </p>
                                     </button>
                                     <button
                                         onClick={() => setCreateMode('proposal')}
-                                        className="p-8 border-4 border-black hover:bg-neo-yellow transition-all group shadow-neo hover:shadow-neo-lg hover:-translate-y-1"
+                                        className="border-4 border-black p-8 shadow-neo transition-all hover:-translate-y-1 hover:bg-neo-yellow"
                                     >
-                                        <Sparkles className="w-16 h-16 mx-auto mb-4" />
-                                        <h3 className="text-2xl font-black uppercase mb-2">Ho un'idea</h3>
-                                        <p className="font-medium text-zinc-500 group-hover:text-black/80">Proponi un tema o un'avventura e cerca un Dungeon Master.</p>
+                                        <Sparkles className="mx-auto mb-4 h-16 w-16" />
+                                        <h3 className="text-2xl font-black uppercase">Ho un concept</h3>
+                                        <p className="mt-2 font-medium text-zinc-500">
+                                            Pubblico in bacheca un’idea che deve ancora trovare DM, party o forma definitiva.
+                                        </p>
                                     </button>
                                 </div>
-                                <button onClick={() => setShowCreateModal(false)} className="underline font-bold text-zinc-500 mt-4 block mx-auto">Annulla</button>
+                                <button
+                                    onClick={resetCreationForm}
+                                    className="mx-auto block font-bold text-zinc-500 underline"
+                                >
+                                    Annulla
+                                </button>
                             </div>
                         ) : (
-                            <form onSubmit={handleCreateCampaign} className="p-8 space-y-6">
-                                {/* Form content reused from previous implementation */}
-                                <div className="flex justify-between items-center mb-6 border-b-4 border-black pb-4">
-                                    <h2 className="text-3xl font-black uppercase">{createMode === 'dm' ? 'Nuova Campagna' : 'Proponi Avventura'}</h2>
-                                    <button type="button" onClick={() => setShowCreateModal(false)}><X className="w-8 h-8" /></button>
+                            <form onSubmit={handleCreateCampaign} className="app-modal-body space-y-6 p-5 md:p-8">
+                                <div className="app-modal-header mb-6 flex items-center justify-between border-b-4 border-black pb-4 bg-white">
+                                    <h2 className="text-3xl font-black uppercase">
+                                        {createMode === 'dm' ? 'Nuova Campagna' : 'Nuovo Annuncio in Bacheca'}
+                                    </h2>
+                                    <button type="button" onClick={resetCreationForm}>
+                                        <X className="h-8 w-8" />
+                                    </button>
                                 </div>
 
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="block font-black uppercase text-sm mb-1">Titolo</label>
+                                        <label className="mb-1 block text-sm font-black uppercase">Titolo</label>
                                         <input
                                             required
                                             value={newCampaignData.title}
-                                            onChange={e => setNewCampaignData({ ...newCampaignData, title: e.target.value })}
-                                            className="w-full p-3 border-2 border-black font-bold focus:shadow-neo focus:outline-none"
+                                            onChange={event => setNewCampaignData({ ...newCampaignData, title: event.target.value })}
+                                            className="w-full border-2 border-black p-3 font-bold focus:outline-none focus:shadow-neo"
                                         />
                                     </div>
+
                                     <div>
-                                        <label className="block font-black uppercase text-sm mb-1">Descrizione / Trama</label>
+                                        <label className="mb-1 block text-sm font-black uppercase">Descrizione / Hook Narrativo</label>
                                         <textarea
                                             required
                                             rows={4}
                                             value={newCampaignData.description}
-                                            onChange={e => setNewCampaignData({ ...newCampaignData, description: e.target.value })}
-                                            className="w-full p-3 border-2 border-black focus:shadow-neo focus:outline-none"
-                                            placeholder={createMode === 'proposal' ? "Descrivi il tema che vorresti giocare..." : "L'incipit della storia..."}
+                                            onChange={event => setNewCampaignData({ ...newCampaignData, description: event.target.value })}
+                                            className="w-full border-2 border-black p-3 focus:outline-none focus:shadow-neo"
+                                            placeholder={createMode === 'proposal' ? 'Pitch rapido dell’idea, tono e cosa cerchi dalla community...' : 'Concept della campagna, premessa narrativa e target del tavolo...'}
                                         />
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block font-black uppercase text-sm mb-1">Sistema</label>
+                                            <label className="mb-1 block text-sm font-black uppercase">Sistema</label>
                                             <select
                                                 value={newCampaignData.system}
-                                                onChange={e => setNewCampaignData({ ...newCampaignData, system: e.target.value })}
-                                                className="w-full p-3 border-2 border-black font-bold focus:outline-none"
+                                                onChange={event => setNewCampaignData({ ...newCampaignData, system: event.target.value })}
+                                                className="w-full border-2 border-black p-3 font-bold focus:outline-none"
                                             >
-                                                <option>D&D 5e</option>
+                                                <option>D&amp;D 5e</option>
                                                 <option>Pathfinder 2e</option>
                                                 <option>Cyberpunk Red</option>
                                                 <option>Call of Cthulhu</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block font-black uppercase text-sm mb-1">Min Giocatori</label>
+                                            <label className="mb-1 block text-sm font-black uppercase">Frequenza</label>
+                                            <select
+                                                value={newCampaignData.frequency}
+                                                onChange={event => setNewCampaignData({ ...newCampaignData, frequency: event.target.value })}
+                                                className="w-full border-2 border-black p-3 font-bold focus:outline-none"
+                                            >
+                                                <option>Weekly</option>
+                                                <option>Bi-weekly</option>
+                                                <option>Monthly</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="mb-1 block text-sm font-black uppercase">Min Giocatori</label>
                                             <input
                                                 type="number"
                                                 min={1}
                                                 value={newCampaignData.minPlayers}
-                                                onChange={e => setNewCampaignData({ ...newCampaignData, minPlayers: parseInt(e.target.value) })}
-                                                className="w-full p-3 border-2 border-black font-bold focus:outline-none"
+                                                onChange={event => setNewCampaignData({ ...newCampaignData, minPlayers: parseInt(event.target.value, 10) || 1 })}
+                                                className="w-full border-2 border-black p-3 font-bold focus:outline-none"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="mb-1 block text-sm font-black uppercase">Max Giocatori</label>
+                                            <input
+                                                type="number"
+                                                min={1}
+                                                value={newCampaignData.maxPlayers}
+                                                onChange={event => setNewCampaignData({ ...newCampaignData, maxPlayers: parseInt(event.target.value, 10) || 1 })}
+                                                className="w-full border-2 border-black p-3 font-bold focus:outline-none"
                                             />
                                         </div>
                                     </div>
 
                                     {createMode === 'dm' && (
-                                        <div className="space-y-4 pt-4 border-t-2 border-dashed border-zinc-300">
-                                            <div className="bg-neo-lime/20 p-4 border-2 border-black">
-                                                <h4 className="font-black uppercase text-sm mb-2 flex items-center gap-2"><PenTool className="w-4 h-4" /> Sezione DM</h4>
+                                        <div className="space-y-4 border-t-2 border-dashed border-zinc-300 pt-4">
+                                            <div className="border-2 border-black bg-neo-lime/20 p-4">
+                                                <h4 className="mb-3 flex items-center gap-2 text-sm font-black uppercase">
+                                                    <PenTool className="h-4 w-4" /> Strumenti del Dungeon Master
+                                                </h4>
                                                 <div className="space-y-4">
                                                     <div>
-                                                        <label className="block font-bold text-xs uppercase mb-1">Regole del Tavolo (Markdown)</label>
+                                                        <label className="mb-1 block text-xs font-bold uppercase">Regole del Tavolo</label>
                                                         <textarea
                                                             value={newCampaignData.rules}
-                                                            onChange={e => setNewCampaignData({ ...newCampaignData, rules: e.target.value })}
-                                                            className="w-full p-2 border border-black text-sm bg-white"
+                                                            onChange={event => setNewCampaignData({ ...newCampaignData, rules: event.target.value })}
+                                                            className="w-full border border-black bg-white p-2 text-sm"
                                                             rows={3}
-                                                            placeholder="- Rispetto reciproco\n- Avvisare 24h prima..."
+                                                            placeholder="- Rispetto reciproco&#10;- Sessione zero obbligatoria"
                                                         />
                                                     </div>
-                                                    <div className="grid grid-cols-2 gap-4">
-                                                        <div>
-                                                            <label className="block font-bold text-xs uppercase mb-1">Durata Sessione</label>
-                                                            <input
-                                                                value={newCampaignData.sessionDuration}
-                                                                onChange={e => setNewCampaignData({ ...newCampaignData, sessionDuration: e.target.value })}
-                                                                className="w-full p-2 border border-black text-sm"
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label className="block font-bold text-xs uppercase mb-1">Frequenza</label>
-                                                            <select
-                                                                value={newCampaignData.frequency}
-                                                                onChange={e => setNewCampaignData({ ...newCampaignData, frequency: e.target.value })}
-                                                                className="w-full p-2 border border-black text-sm"
-                                                            >
-                                                                <option>Weekly</option>
-                                                                <option>Bi-weekly</option>
-                                                                <option>Monthly</option>
-                                                            </select>
-                                                        </div>
+                                                    <div>
+                                                        <label className="mb-1 block text-xs font-bold uppercase">Durata Sessione</label>
+                                                        <input
+                                                            value={newCampaignData.sessionDuration}
+                                                            onChange={event => setNewCampaignData({ ...newCampaignData, sessionDuration: event.target.value })}
+                                                            className="w-full border border-black p-2 text-sm"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="mb-1 block text-xs font-bold uppercase">Plot</label>
+                                                        <textarea
+                                                            value={newCampaignData.plot}
+                                                            onChange={event => setNewCampaignData({ ...newCampaignData, plot: event.target.value })}
+                                                            className="w-full border border-black bg-white p-2 text-sm"
+                                                            rows={3}
+                                                            placeholder="Hook narrativo, minacce principali, tono, ritmo della campagna."
+                                                        />
                                                     </div>
                                                 </div>
                                             </div>
@@ -649,12 +758,20 @@ const DnDTracker: React.FC = () => {
                                     )}
                                 </div>
 
-                                <button
-                                    type="submit"
-                                    className="w-full py-4 bg-black text-white font-black uppercase text-xl hover:bg-zinc-800 transition-all flex justify-center items-center gap-2 shadow-neo hover:translate-y-1 hover:shadow-none"
-                                >
-                                    {createMode === 'dm' ? 'Crea Campagna' : 'Invia Proposta'} <ChevronRight className="w-6 h-6" />
-                                </button>
+                                <div className="app-modal-footer">
+                                    <button
+                                        type="submit"
+                                        disabled={submitting}
+                                        className="flex w-full items-center justify-center gap-2 border-2 border-black bg-black py-4 text-xl font-black uppercase text-white shadow-neo transition-all hover:translate-y-1 hover:bg-zinc-800 hover:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+                                    >
+                                        {submitting ? 'Salvataggio...' : (
+                                            <>
+                                                {createMode === 'dm' ? 'Crea Campagna' : 'Pubblica Annuncio'}
+                                                <ChevronRight className="h-6 w-6" />
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                             </form>
                         )}
                     </div>
@@ -664,11 +781,10 @@ const DnDTracker: React.FC = () => {
             {editingChar && (
                 <EditCharacterModal
                     character={editingChar}
-                    isOpen={true}
+                    isOpen
                     onClose={() => setEditingChar(null)}
                     onUpdate={() => {
                         refreshCampaigns();
-                        api.get(`/campaigns/${selectedCampaign?.id}`).then(res => setSelectedCampaign(res.data));
                     }}
                 />
             )}

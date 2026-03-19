@@ -59,10 +59,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultMode = 'r
     };
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="bg-white border-4 border-black w-full max-w-md shadow-neo-lg relative overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="app-modal-shell z-[60] animate-in fade-in duration-200">
+            <div className="app-modal-panel relative max-w-md overflow-hidden animate-in slide-in-from-bottom-6 md:zoom-in md:slide-in-from-bottom-0 duration-200">
                 {/* Header */}
-                <div className={`p-6 border-b-2 border-black flex justify-between items-center ${isRegistering ? 'bg-neo-lime' : 'bg-neo-cyan'}`}>
+                <div className={`app-modal-header p-5 md:p-6 border-b-2 border-black flex justify-between items-center ${isRegistering ? 'bg-neo-lime' : 'bg-neo-cyan'}`}>
                     <h2 className="text-2xl font-black uppercase flex items-center gap-2">
                         {isRegistering ? <UserPlus className="w-6 h-6" /> : <LogIn className="w-6 h-6" />}
                         {isRegistering ? 'Unisciti al Party' : 'Bentornato'}
@@ -72,7 +72,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultMode = 'r
                     </button>
                 </div>
 
-                <div className="p-8">
+                <div className="app-modal-body p-5 md:p-8">
                     {error && (
                         <div className="mb-4 bg-red-100 border-2 border-red-500 text-red-700 px-4 py-3 font-bold text-sm">
                             {error}
