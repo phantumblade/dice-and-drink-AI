@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, Character } from '../types';
-import { Mail, Shield, Clock, Settings, Trophy, Timer, Swords, X, Upload, Camera, Calendar, Scroll, Plus, Crown } from 'lucide-react';
+import { User, Character, UserRole } from '../types';
+import { Mail, Shield, Clock, Settings, Trophy, Timer, Swords, X, Camera, Calendar, Scroll, Plus, Crown } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import { useTournaments } from '../contexts/TournamentContext';
 import api from '../services/api';
@@ -10,6 +10,8 @@ import CharacterCreationModal from '../components/CharacterCreationModal';
 import DMDashboard from '../components/DMDashboard';
 import CharacterSheetModal from '../components/CharacterSheetModal';
 import Dashboard from './Dashboard'; // Import Dashboard component
+import { useNavigate } from 'react-router-dom';
+import { formatCalendarBadge } from '../utils/date';
 import { getAvatarUrl } from '../utils/url';
 
 interface ProfileProps {
@@ -17,9 +19,10 @@ interface ProfileProps {
 }
 
 const Profile: React.FC<ProfileProps> = ({ user }) => {
-    const { updateProfile, withdrawFromTournament } = useUser();
+    const { updateProfile, withdrawFromTournament, refreshUser } = useUser();
     const { tournaments } = useTournaments();
     const { showToast } = useToast();
+    const navigate = useNavigate();
     const [isEditing, setIsEditing] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [activeTab, setActiveTab] = useState<'overview' | 'characters' | 'dm'>('overview');
@@ -35,10 +38,18 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
     });
 
     useEffect(() => {
-        if (user.role !== 'admin' && (activeTab === 'characters' || activeTab === 'dm')) {
+        if (user.role !== UserRole.ADMIN && (activeTab === 'characters' || activeTab === 'dm')) {
             fetchCharacters();
         }
     }, [activeTab, user.id, user.role]);
+
+    useEffect(() => {
+        setEditForm({
+            name: user.name,
+            email: user.email,
+            avatar: user.avatar || ''
+        });
+    }, [user.avatar, user.email, user.name]);
 
     const fetchCharacters = async () => {
         try {
@@ -49,10 +60,12 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
         }
     };
 
-    const handleSave = (e: React.FormEvent) => {
+    const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
-        updateProfile(editForm);
-        setIsEditing(false);
+        const saved = await updateProfile(editForm);
+        if (saved) {
+            setIsEditing(false);
+        }
     };
 
     const handleAvatarClick = () => {
@@ -75,22 +88,23 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
             });
 
             const newAvatarUrl = response.data.avatar;
-            updateProfile({ ...user, avatar: newAvatarUrl });
             setEditForm(prev => ({ ...prev, avatar: newAvatarUrl }));
+            await refreshUser();
+            showToast('Foto profilo aggiornata con successo!', 'success');
 
         } catch (error) {
             console.error('Error uploading avatar:', error);
             showToast('Errore durante il caricamento dell\'immagine', 'error');
         } finally {
             setIsUploading(false);
-            showToast('Foto profilo aggiornata con successo!', 'success');
+            e.target.value = '';
         }
     };
 
     const userTournaments = tournaments.filter(t => user.registeredTournaments?.some(rt => rt.tournamentId === t.id));
 
     // ADMIN VIEW
-    if (user.role === 'admin') {
+    if (user.role === UserRole.ADMIN) {
         return <Dashboard />;
     }
 
@@ -112,7 +126,7 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
                             <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
                                 <div className="w-32 h-32 md:w-40 md:h-40 border-4 border-white shadow-neo bg-gray-200 overflow-hidden relative">
                                     <img
-                                        src={getAvatarUrl(user.avatar) || 'https://via.placeholder.com/150'}
+                                        src={getAvatarUrl(user.avatar) || '/default-avatar.svg'}
                                         alt={user.name}
                                         className="w-full h-full object-cover"
                                     />
@@ -240,29 +254,33 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
                             {(!user.bookings || user.bookings.length === 0) ? (
                                 <div className="bg-white/50 border-2 border-dashed border-gray-400 p-8 text-center rounded-lg">
                                     <p className="text-gray-500 font-medium">Nessuna prenotazione futura.</p>
-                                    <button className="mt-4 text-sm font-bold underline hover:text-neo-violet">Prenota un tavolo</button>
+                                    <button onClick={() => navigate('/booking')} className="mt-4 text-sm font-bold underline hover:text-neo-violet">Prenota un tavolo</button>
                                 </div>
                             ) : (
                                 <div className="space-y-4">
-                                    {(user.bookings || []).map(booking => (
-                                        <div key={booking.id} className="p-4 bg-white border-2 border-black flex flex-col sm:flex-row justify-between items-start sm:items-center shadow-neo-sm hover:translate-x-1 transition-transform gap-4">
-                                            <div className="flex items-center gap-4">
-                                                <div className="bg-black text-white p-3 font-black text-center leading-none w-16 rounded">
-                                                    <span className="text-xl block">{booking.date.split('-')[2]}</span>
-                                                    <span className="text-xs uppercase opacity-80">Dic</span> {/* Mock month for now */}
-                                                </div>
-                                                <div>
-                                                    <p className="font-bold text-lg">Tavolo per {booking.participants}</p>
-                                                    <div className="flex items-center gap-2 text-sm font-medium text-gray-600">
-                                                        <Clock className="w-3 h-3" /> {booking.time} ({booking.duration}h)
-                                                        <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
-                                                        <span>{booking.items.length} oggetti pre-ordinati</span>
+                                    {(user.bookings || []).map(booking => {
+                                        const bookingDate = formatCalendarBadge(booking.date);
+
+                                        return (
+                                            <div key={booking.id} className="p-4 bg-white border-2 border-black flex flex-col sm:flex-row justify-between items-start sm:items-center shadow-neo-sm hover:translate-x-1 transition-transform gap-4">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="bg-black text-white p-3 font-black text-center leading-none w-16 rounded">
+                                                        <span className="text-xl block">{bookingDate.day}</span>
+                                                        <span className="text-xs uppercase opacity-80">{bookingDate.month}</span>
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-lg">Tavolo per {booking.participants}</p>
+                                                        <div className="flex items-center gap-2 text-sm font-medium text-gray-600">
+                                                            <Clock className="w-3 h-3" /> {booking.time} ({booking.duration}h)
+                                                            <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
+                                                            <span>{booking.items?.length || 0} oggetti pre-ordinati</span>
+                                                        </div>
                                                     </div>
                                                 </div>
+                                                <span className="text-xs px-3 py-1 bg-neo-pink text-white border-2 border-black font-bold uppercase rounded-full self-start sm:self-center">Confermato</span>
                                             </div>
-                                            <span className="text-xs px-3 py-1 bg-neo-pink text-white border-2 border-black font-bold uppercase rounded-full self-start sm:self-center">Confermato</span>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
@@ -297,8 +315,10 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
                                                     </span>
                                                 )}
                                                 <button
-                                                    onClick={() => {
-                                                        if (confirm('Ritirarsi dal torneo?')) withdrawFromTournament(t.id);
+                                                    onClick={async () => {
+                                                        if (confirm('Ritirarsi dal torneo?')) {
+                                                            await withdrawFromTournament(t.id);
+                                                        }
                                                     }}
                                                     className="text-xs text-red-500 font-bold hover:bg-red-50 px-3 py-1 rounded transition-colors"
                                                 >

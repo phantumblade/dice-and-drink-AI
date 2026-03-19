@@ -494,11 +494,12 @@ const Tournaments: React.FC = () => {
                                                 <CheckCircle className="w-6 h-6" /> Sei Iscritto
                                             </div>
                                             <button
-                                                onClick={() => {
+                                                onClick={async () => {
                                                     if (confirm('Sei sicuro di volerti ritirare?')) {
-                                                        withdrawFromTournament(selectedTournament.id);
-                                                        setSelectedTournament(null);
-                                                        showToast('Ti sei ritirato dal torneo', 'info');
+                                                        const withdrawn = await withdrawFromTournament(selectedTournament.id);
+                                                        if (withdrawn) {
+                                                            setSelectedTournament(null);
+                                                        }
                                                     }
                                                 }}
                                                 className="bg-red-500 text-white border-2 border-black px-8 font-black uppercase hover:bg-red-600 shadow-neo hover:shadow-none hover:translate-y-1 transition-all"

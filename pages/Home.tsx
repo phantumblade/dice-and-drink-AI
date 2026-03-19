@@ -3,6 +3,10 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Calendar, Coffee, Dice6, Shield, ShoppingBag, Swords, UserPlus, Beer, Gamepad2, Trophy, Star, Lightbulb, Users, Crown, Scroll, Target, Sparkles, Zap } from 'lucide-react';
 
 const Home: React.FC = () => {
+    const openRegisterModal = () => {
+        window.dispatchEvent(new CustomEvent('open-auth-modal', { detail: { mode: 'register' } }));
+    };
+
     return (
         <div className="flex flex-col font-sans text-black">
             {/* Hero Section */}
@@ -46,7 +50,6 @@ const Home: React.FC = () => {
 
                     <div className="md:w-1/2 relative">
                         <div className="absolute inset-0 bg-neo-pink translate-x-4 translate-y-4 border-2 border-black"></div>
-                        {/* IMMAGINE HERO: Sostituisci src con la tua immagine in public/images/tua-foto.jpg */}
                         <img
                             src="https://images.unsplash.com/photo-1606167668584-78701c57f13d?q=80&w=800&auto=format&fit=crop"
                             alt="Amici che giocano a Catan"
@@ -139,7 +142,6 @@ const Home: React.FC = () => {
                         </div>
                         <div className="md:w-1/2 relative">
                             <div className="border-4 border-black p-2 bg-neo-bg shadow-neo-lg rotate-2">
-                                {/* IMMAGINE TORNEO: Sostituisci src con la tua immagine personalizzata */}
                                 <img src="https://images.unsplash.com/photo-1599508704512-2f19efd1e35f?q=80&w=800&auto=format&fit=crop" alt="Torneo di carte" className="w-full grayscale hover:grayscale-0 transition-all duration-500" />
                             </div>
                         </div>
@@ -211,11 +213,45 @@ const Home: React.FC = () => {
                             <div className="md:w-1/2 relative">
                                 <div className="absolute inset-0 bg-black translate-x-[-12px] translate-y-3"></div>
                                 <div className="relative border-4 border-black bg-white p-2 -rotate-1 transition-transform group hover:rotate-0">
-                                    <div className="bg-neo-pink/20 border-2 border-black border-dashed p-8 text-center min-h-[300px] flex flex-col justify-center items-center">
-                                        {/* IMMAGINE LOYALTY: Sostituisci questo blocco con la tua immagine <img> */}
-                                        <Star className="w-24 h-24 text-neo-pink mb-4" />
-                                        <p className="font-black uppercase text-xl text-neo-pink/50 opacity-50">Inserisci screenshot Livello XP qui</p>
-                                        <p className="text-xs text-center mt-2 font-mono bg-white p-1 border border-black">src="/images/xp-level.jpg"</p>
+                                    <div className="bg-neo-pink/15 border-2 border-black p-6 min-h-[300px] flex items-center justify-center">
+                                        <div className="w-full max-w-sm bg-white border-2 border-black shadow-neo-sm p-5">
+                                            <div className="flex items-center justify-between gap-4 border-b-2 border-black pb-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-black bg-neo-yellow">
+                                                        <Star className="w-7 h-7" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs font-black uppercase text-gray-500">Profilo Avventuriero</p>
+                                                        <p className="text-xl font-black uppercase">Livello 12</p>
+                                                    </div>
+                                                </div>
+                                                <span className="border-2 border-black bg-neo-cyan px-2 py-1 text-xs font-black uppercase">VIP</span>
+                                            </div>
+
+                                            <div className="mt-4 space-y-3">
+                                                <div className="flex items-center justify-between text-sm font-bold">
+                                                    <span className="flex items-center gap-2"><Zap className="w-4 h-4 text-neo-pink" /> XP Raccolti</span>
+                                                    <span>2.450 / 3.000</span>
+                                                </div>
+                                                <div className="h-4 border-2 border-black bg-neo-bg">
+                                                    <div className="h-full w-4/5 bg-neo-pink"></div>
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-3 pt-2">
+                                                    <div className="border-2 border-black bg-neo-bg p-3 text-center">
+                                                        <Users className="w-5 h-5 mx-auto mb-1" />
+                                                        <p className="text-[10px] font-black uppercase">Party</p>
+                                                    </div>
+                                                    <div className="border-2 border-black bg-neo-bg p-3 text-center">
+                                                        <Sparkles className="w-5 h-5 mx-auto mb-1" />
+                                                        <p className="text-[10px] font-black uppercase">Bonus</p>
+                                                    </div>
+                                                    <div className="border-2 border-black bg-neo-bg p-3 text-center">
+                                                        <Trophy className="w-5 h-5 mx-auto mb-1" />
+                                                        <p className="text-[10px] font-black uppercase">Loot</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 {/* Badge */}
@@ -241,7 +277,7 @@ const Home: React.FC = () => {
                                         <Target className="w-6 h-6 text-black fill-neo-cyan" /> Accesso anticipato alle prenotazioni stanze
                                     </li>
                                 </ul>
-                                <button onClick={() => window.scrollTo(0, 0)} className="bg-black text-white px-8 py-4 border-2 border-black font-black uppercase text-lg shadow-neo hover:bg-white hover:text-black hover:translate-y-1 hover:shadow-none transition-all">
+                                <button onClick={openRegisterModal} className="bg-black text-white px-8 py-4 border-2 border-black font-black uppercase text-lg shadow-neo hover:bg-white hover:text-black hover:translate-y-1 hover:shadow-none transition-all">
                                     Crea Account Gratis
                                 </button>
                             </div>

@@ -1,21 +1,29 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, UserPlus, LogIn, ArrowRight } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 
 interface AuthModalProps {
     isOpen: boolean;
     onClose: () => void;
+    defaultMode?: 'register' | 'login';
 }
 
-const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
+const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultMode = 'register' }) => {
     const { login, register } = useUser();
-    const [isRegistering, setIsRegistering] = useState(true); // Default to registration
+    const [isRegistering, setIsRegistering] = useState(defaultMode === 'register');
     const [formData, setFormData] = useState({
         name: '',
         email: '',
         password: ''
     });
     const [error, setError] = useState('');
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        setIsRegistering(defaultMode === 'register');
+        setError('');
+    }, [defaultMode, isOpen]);
 
     if (!isOpen) return null;
 

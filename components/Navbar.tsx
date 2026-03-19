@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, Dice5, LogOut, ShieldAlert, User as UserIcon, UserPlus, Bell, Check } from 'lucide-react';
 import { UserRole } from '../types';
@@ -11,6 +11,7 @@ const Navbar: React.FC = () => {
   const { unreadCount, notifications, markAsRead } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'register' | 'login'>('register');
   const [showNotifications, setShowNotifications] = useState(false);
   const location = useLocation();
 
@@ -28,6 +29,28 @@ const Navbar: React.FC = () => {
       {children}
     </Link>
   );
+
+  useEffect(() => {
+    setIsOpen(false);
+    setShowNotifications(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const handleOpenAuthModal = (event: Event) => {
+      const detail = (event as CustomEvent<{ mode?: 'register' | 'login' }>).detail;
+
+      setAuthMode(detail?.mode === 'login' ? 'login' : 'register');
+      setIsOpen(false);
+      setShowNotifications(false);
+      setIsAuthOpen(true);
+    };
+
+    window.addEventListener('open-auth-modal', handleOpenAuthModal);
+
+    return () => {
+      window.removeEventListener('open-auth-modal', handleOpenAuthModal);
+    };
+  }, []);
 
   return (
     <>
@@ -120,7 +143,10 @@ const Navbar: React.FC = () => {
                 </div>
               ) : (
                 <button
-                  onClick={() => setIsAuthOpen(true)}
+                  onClick={() => {
+                    setAuthMode('register');
+                    setIsAuthOpen(true);
+                  }}
                   className="group relative flex items-center justify-center p-2 border-2 border-black bg-white shadow-neo hover:shadow-neo-hover hover:translate-y-0.5 transition-all"
                   title="Accedi o Registrati"
                 >
@@ -158,7 +184,7 @@ const Navbar: React.FC = () => {
                 {user ? (
                   <button onClick={logout} className="w-full text-left px-4 py-3 font-bold bg-neo-pink border-2 border-black text-white shadow-neo">Logout</button>
                 ) : (
-                  <button onClick={() => { setIsOpen(false); setIsAuthOpen(true); }} className="w-full text-left px-4 py-3 font-bold bg-neo-cyan border-2 border-black shadow-neo flex items-center gap-2">
+                  <button onClick={() => { setAuthMode('register'); setIsOpen(false); setIsAuthOpen(true); }} className="w-full text-left px-4 py-3 font-bold bg-neo-cyan border-2 border-black shadow-neo flex items-center gap-2">
                     <UserPlus className="w-5 h-5" /> Accedi / Registrati
                   </button>
                 )}
@@ -168,7 +194,7 @@ const Navbar: React.FC = () => {
         )}
       </nav>
 
-      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} defaultMode={authMode} />
     </>
   );
 };

@@ -25,7 +25,7 @@ const Booking: React.FC = () => {
 
     const handleConfirm = async () => {
         if (!user) {
-            alert("Devi essere loggato per prenotare.");
+            window.dispatchEvent(new CustomEvent('open-auth-modal', { detail: { mode: 'register' } }));
             return;
         }
 

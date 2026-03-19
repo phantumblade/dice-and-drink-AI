@@ -2,6 +2,8 @@ import React from 'react';
 import { Github, Twitter, Instagram, MapPin, Clock, Phone } from 'lucide-react';
 
 const Footer: React.FC = () => {
+  const currentYear = new Date().getFullYear();
+
   return (
     <footer className="bg-white border-t-2 border-black text-black py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -58,7 +60,7 @@ const Footer: React.FC = () => {
         </div>
 
         <div className="border-t-2 border-black pt-8 mt-8 text-center text-xs font-bold uppercase tracking-widest opacity-60">
-          © 2024 Dice & Drink Gaming Café. All rights reserved. Game Hard.
+          © {currentYear} Dice & Drink Gaming Café. All rights reserved. Game Hard.
         </div>
       </div>
     </footer>

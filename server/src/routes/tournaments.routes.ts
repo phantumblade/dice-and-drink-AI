@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import prisma from '../prisma';
+import { authenticateToken, AuthRequest } from '../middleware/auth.middleware';
 
 const router = Router();
 
@@ -111,6 +112,51 @@ router.post('/:id/join', async (req, res) => {
         res.json({ message: 'Successfully joined tournament' });
     } catch (error) {
         res.status(500).json({ error: 'Failed to join tournament' });
+    }
+});
+
+router.post('/:id/withdraw', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+        const tournamentId = req.params.id;
+        const userId = req.user!.userId;
+
+        const participant = await prisma.tournamentParticipant.findUnique({
+            where: {
+                userId_tournamentId: {
+                    userId,
+                    tournamentId,
+                }
+            }
+        });
+
+        if (!participant) {
+            return res.status(404).json({ error: 'Registration not found' });
+        }
+
+        await prisma.tournamentParticipant.delete({
+            where: {
+                userId_tournamentId: {
+                    userId,
+                    tournamentId,
+                }
+            }
+        });
+
+        const tournament = await prisma.tournament.findUnique({
+            where: { id: tournamentId },
+            select: { filled: true }
+        });
+
+        if (tournament && tournament.filled > 0) {
+            await prisma.tournament.update({
+                where: { id: tournamentId },
+                data: { filled: { decrement: 1 } }
+            });
+        }
+
+        res.json({ message: 'Successfully withdrawn from tournament' });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to withdraw from tournament' });
     }
 });
 

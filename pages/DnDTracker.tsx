@@ -488,7 +488,7 @@ const DnDTracker: React.FC = () => {
                                             {selectedCampaign.notes?.filter(n => n.type === 'CHAT').map(note => (
                                                 <div key={note.id} className={`flex items-end gap-2 ${note.userId === user?.id ? 'flex-row-reverse' : ''} mb-2`}>
                                                     <img
-                                                        src={note.character?.avatar || note.user?.avatar || "https://via.placeholder.com/40"}
+                                                        src={note.character?.avatar || note.user?.avatar || "/default-avatar.svg"}
                                                         className="w-8 h-8 border border-black bg-white object-cover"
                                                     />
                                                     <div className={`max-w-[70%] p-3 border-2 border-black text-sm font-medium shadow-sm ${note.userId === user?.id ? 'bg-neo-cyan rounded-tr-none' :

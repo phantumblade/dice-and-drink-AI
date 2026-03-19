@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import prisma from '../prisma';
+import { serializeUserProfile, userProfileInclude } from '../utils/serializeUser';
 
 const router = Router();
 
@@ -31,26 +31,18 @@ router.post('/register', async (req, res) => {
             { expiresIn: '24h' }
         );
 
+        const userProfile = await prisma.user.findUnique({
+            where: { id: user.id },
+            include: userProfileInclude,
+        });
+
+        if (!userProfile) {
+            return res.status(500).json({ message: 'User created but profile could not be loaded' });
+        }
+
         res.status(201).json({
             token,
-            user: {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                avatar: user.avatar,
-                registeredTournaments: [],
-                pendingRequests: [],
-                badges: [],
-                bookings: [],
-                stats: {
-                    xp: 0,
-                    gamesPlayed: 0,
-                    winRate: 0,
-                    favoriteGame: 'Nessuno',
-                    totalSpent: 0
-                }
-            }
+            user: serializeUserProfile(userProfile)
         });
     } catch (error) {
         res.status(500).json({ message: 'Error registering user', error });
@@ -77,57 +69,18 @@ router.post('/login', async (req, res) => {
             { expiresIn: '24h' }
         );
 
-        // Fetch all user data
-        const registeredTournaments = await prisma.tournamentParticipant.findMany({
-            where: { userId: user.id },
-            include: { tournament: true }
+        const userProfile = await prisma.user.findUnique({
+            where: { id: user.id },
+            include: userProfileInclude,
         });
 
-        // Tournament requests are not yet implemented in schema, returning empty
-        const pendingRequests: string[] = [];
-
-        const badges = await prisma.badge.findMany({
-            where: { userId: user.id }
-        });
-        const bookings = await prisma.booking.findMany({
-            where: { userId: user.id },
-            include: { items: true }
-        });
-
-        console.log(`Login successful for: ${email} (${user.role})`);
+        if (!userProfile) {
+            return res.status(404).json({ message: 'User not found' });
+        }
 
         res.json({
             token,
-            user: {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                avatar: user.avatar,
-                registeredTournaments: registeredTournaments, // Return full objects
-                pendingRequests: pendingRequests,
-                badges,
-                bookings: bookings.map(b => ({
-                    id: b.id,
-                    date: b.date.toISOString().split('T')[0],
-                    time: b.time,
-                    participants: b.participants,
-                    duration: b.duration,
-                    status: b.status,
-                    items: b.items
-                })),
-                campaignsJoined: await prisma.campaignParticipant.findMany({
-                    where: { userId: user.id },
-                    include: { campaign: true, character: true }
-                }),
-                stats: {
-                    xp: user.xp,
-                    gamesPlayed: user.gamesPlayed,
-                    winRate: user.winRate,
-                    favoriteGame: user.favoriteGame || 'Nessuno',
-                    totalSpent: user.totalSpent
-                }
-            }
+            user: serializeUserProfile(userProfile)
         });
     } catch (error) {
         console.error('Login error:', error);

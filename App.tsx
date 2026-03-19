@@ -1,17 +1,9 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
-import Catalog from './pages/Catalog';
-import Tournaments from './pages/Tournaments';
-import Dashboard from './pages/Dashboard';
-import Profile from './pages/Profile';
-import Booking from './pages/Booking';
-import About from './pages/About';
-import DnDTracker from './pages/DnDTracker';
 import CartBar from './components/CartBar';
-import CampaignDetailsPage from './pages/CampaignDetailsPage'; // Import CampaignDetailsPage
 
 import { UserRole } from './types';
 import { CartProvider } from './contexts/CartContext';
@@ -22,18 +14,39 @@ import { CampaignProvider } from './contexts/CampaignContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 
-const AppContent: React.FC = () => {
+const Catalog = lazy(() => import('./pages/Catalog'));
+const Tournaments = lazy(() => import('./pages/Tournaments'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Booking = lazy(() => import('./pages/Booking'));
+const About = lazy(() => import('./pages/About'));
+const DnDTracker = lazy(() => import('./pages/DnDTracker'));
+const CampaignDetailsPage = lazy(() => import('./pages/CampaignDetailsPage'));
+
+const ProtectedRoute: React.FC<{ children?: React.ReactNode; allowedRoles?: UserRole[] }> = ({ children, allowedRoles }) => {
   const { user } = useUser();
 
-  const ProtectedRoute = ({ children, allowedRoles }: { children?: React.ReactNode, allowedRoles?: UserRole[] }) => {
-    if (!user) {
-      return <Navigate to="/" replace />;
-    }
-    if (allowedRoles && !allowedRoles.includes(user.role)) {
-      return <Navigate to="/" replace />;
-    }
-    return <>{children}</>;
-  };
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+const RouteLoader: React.FC = () => (
+  <div className="flex min-h-[50vh] items-center justify-center bg-neo-bg px-4">
+    <div className="border-2 border-black bg-white px-6 py-4 text-center font-black uppercase shadow-neo">
+      Caricamento sezione...
+    </div>
+  </div>
+);
+
+const AppContent: React.FC = () => {
+  const { user } = useUser();
 
   return (
     <Router>
@@ -41,32 +54,33 @@ const AppContent: React.FC = () => {
         <Navbar />
 
         <main className="flex-grow">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/catalog" element={<Catalog />} />
-            <Route path="/tournaments" element={<Tournaments />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/booking" element={<Booking />} />
+          <Suspense fallback={<RouteLoader />}>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/catalog" element={<Catalog />} />
+              <Route path="/tournaments" element={<Tournaments />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/booking" element={<Booking />} />
 
-            <Route path="/dnd" element={
-              user ? <DnDTracker user={user} /> : <Navigate to="/" replace />
-            } />
+              <Route path="/dnd" element={
+                user ? <DnDTracker user={user} /> : <Navigate to="/" replace />
+              } />
 
-            <Route path="/profile" element={
-              <ProtectedRoute>
-                <Profile user={user!} />
-              </ProtectedRoute>
-            } />
+              <Route path="/profile" element={
+                <ProtectedRoute>
+                  <Profile user={user!} />
+                </ProtectedRoute>
+              } />
 
-            <Route path="/dashboard" element={
-              <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.STAFF]}>
-                <Dashboard />
-              </ProtectedRoute>
-            } />
+              <Route path="/dashboard" element={
+                <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.STAFF]}>
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
 
-            {/* New route for campaign details */}
-            <Route path="/campaigns/:id" element={<CampaignDetailsPage />} />
-          </Routes>
+              <Route path="/campaigns/:id" element={<CampaignDetailsPage />} />
+            </Routes>
+          </Suspense>
         </main>
 
         <Footer />

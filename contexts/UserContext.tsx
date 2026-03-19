@@ -14,11 +14,12 @@ interface UserContextType {
   login: (email: string, password: string) => Promise<{ success: boolean; message?: string }>;
   register: (data: RegisterData) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
-  updateProfile: (data: Partial<User>) => void;
+  updateProfile: (data: Partial<User>) => Promise<boolean>;
   addBooking: (booking: Booking) => Promise<void>;
   registerForTournament: (tournamentId: string) => Promise<boolean>;
+  refreshUser: () => Promise<void>;
   requestJoinTournament: (tournamentId: string) => void;
-  withdrawFromTournament: (tournamentId: string) => void;
+  withdrawFromTournament: (tournamentId: string) => Promise<boolean>;
   loading: boolean;
 }
 
@@ -30,12 +31,16 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const { showToast } = useToast();
 
+  const refreshUser = async () => {
+    const response = await api.get('/users/me');
+    setUser(response.data);
+  };
+
   const checkSession = async () => {
     const token = localStorage.getItem('token');
     if (token) {
       try {
-        const response = await api.get('/users/me');
-        setUser(response.data);
+        await refreshUser();
       } catch (error) {
         console.error("Session check failed", error);
         localStorage.removeItem('token');
@@ -85,10 +90,18 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     showToast('Logout effettuato con successo', 'info');
   };
 
-  const updateProfile = (data: Partial<User>) => {
-    // TODO: Implement API update
-    if (user) {
-      setUser({ ...user, ...data });
+  const updateProfile = async (data: Partial<User>) => {
+    if (!user) return false;
+
+    try {
+      const response = await api.patch('/users/me', data);
+      setUser(response.data);
+      showToast('Profilo aggiornato con successo', 'success');
+      return true;
+    } catch (error: any) {
+      const msg = error.response?.data?.message || "Impossibile aggiornare il profilo";
+      showToast(msg, 'error');
+      return false;
     }
   };
 
@@ -112,10 +125,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (user) {
       try {
         await api.post(`/tournaments/${tournamentId}/join`, { userId: user.id });
-        // Refresh user data to get updated registeredTournaments
-        const response = await api.get('/users/me');
-        setUser(response.data);
-        // showToast('Iscrizione al torneo confermata!', 'success'); // Handled by modal now
+        await refreshUser();
         return true;
       } catch (error) {
         console.error("Failed to join tournament", error);
@@ -131,13 +141,23 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     console.log("Request join not implemented yet");
   };
 
-  const withdrawFromTournament = (tournamentId: string) => {
-    // TODO: Implement API
-    console.log("Withdraw not implemented yet");
+  const withdrawFromTournament = async (tournamentId: string) => {
+    if (!user) return false;
+
+    try {
+      await api.post(`/tournaments/${tournamentId}/withdraw`);
+      await refreshUser();
+      showToast('Ti sei ritirato dal torneo', 'info');
+      return true;
+    } catch (error) {
+      console.error("Failed to withdraw from tournament", error);
+      showToast('Impossibile ritirarsi dal torneo', 'error');
+      return false;
+    }
   };
 
   return (
-    <UserContext.Provider value={{ user, login, register, logout, updateProfile, addBooking, registerForTournament, requestJoinTournament, withdrawFromTournament, loading }}>
+    <UserContext.Provider value={{ user, login, register, logout, updateProfile, addBooking, registerForTournament, refreshUser, requestJoinTournament, withdrawFromTournament, loading }}>
       {children}
     </UserContext.Provider>
   );

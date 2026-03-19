@@ -5,6 +5,7 @@ import multer from 'multer';
 import sharp from 'sharp';
 import path from 'path';
 import fs from 'fs';
+import { serializeUserProfile, userProfileInclude } from '../utils/serializeUser';
 
 // Configure Multer (storage in memory to process with Sharp)
 const storage = multer.memoryStorage();
@@ -26,24 +27,50 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
     try {
         const user = await prisma.user.findUnique({
             where: { id: req.user!.userId },
-            include: {
-                badges: true,
-                bookings: true,
-                registeredTournaments: {
-                    include: { tournament: true }
-                },
-                campaignsJoined: {
-                    include: { campaign: true, character: true }
-                }
-            }
+            include: userProfileInclude
         });
 
         if (!user) return res.status(404).json({ message: 'User not found' });
 
-        const { password, ...userWithoutPassword } = user;
-        res.json(userWithoutPassword);
+        res.json(serializeUserProfile(user));
     } catch (error) {
         res.status(500).json({ message: 'Error fetching profile', error });
+    }
+});
+
+router.patch('/me', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+        const name = typeof req.body.name === 'string' ? req.body.name.trim() : undefined;
+        const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : undefined;
+        const avatar = typeof req.body.avatar === 'string' ? req.body.avatar.trim() : undefined;
+
+        if (name === '' || email === '') {
+            return res.status(400).json({ message: 'Name and email cannot be empty' });
+        }
+
+        const data = {
+            ...(name ? { name } : {}),
+            ...(email ? { email } : {}),
+            ...(avatar ? { avatar } : {}),
+        };
+
+        if (Object.keys(data).length === 0) {
+            return res.status(400).json({ message: 'No valid fields provided' });
+        }
+
+        const updatedUser = await prisma.user.update({
+            where: { id: req.user!.userId },
+            data,
+            include: userProfileInclude,
+        });
+
+        res.json(serializeUserProfile(updatedUser));
+    } catch (error: any) {
+        if (error?.code === 'P2002') {
+            return res.status(409).json({ message: 'Email already in use' });
+        }
+
+        res.status(500).json({ message: 'Error updating profile', error });
     }
 });
 
